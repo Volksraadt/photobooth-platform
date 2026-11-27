@@ -517,6 +517,59 @@ describe('vouchers + cash + session sync', () => {
     const [row] = await db.select().from(sessions).where(eq(sessions.id, s.id));
     expect(row).toMatchObject({ status: 'completed', paymentMethod: 'qris', grossAmount: price() });
   });
+  it('stores consent + survey answers from the session record; a resend without them keeps them (F8)', async () => {
+    const s = newSession();
+    const record = (responses?: unknown[]) => ({
+      events: [],
+      printJobs: [],
+      sessions: [
+        {
+          id: createId(),
+          session: {
+            ...s,
+            completedAt: new Date().toISOString(),
+            status: 'completed',
+            frameId: config.frames[0]!.id,
+            filterId: config.filters[0]!.id,
+            paymentMethod: 'free',
+            amount: 0,
+            extraPrints: 0,
+            offline: false,
+            ...(responses ? { responses } : {}),
+          },
+        },
+      ],
+    });
+    const answers = [
+      {
+        kind: 'consent',
+        elementId: 'c1',
+        page: 'cover',
+        label: 'Saya setuju foto disimpan',
+        answeredAt: new Date().toISOString(),
+      },
+      {
+        kind: 'survey',
+        elementId: 'q1',
+        page: 'review',
+        question: 'Tahu dari mana?',
+        optionIds: ['ig'],
+        optionLabels: ['Instagram'],
+        answeredAt: new Date().toISOString(),
+      },
+    ];
+    const r1 = await call('/device/events', { body: record(answers) });
+    expect(r1.body.accepted).toHaveLength(1);
+    await call('/device/events', { body: record() });
+    const [row] = await db.select().from(sessions).where(eq(sessions.id, s.id));
+    expect(row!.responses).toEqual(answers);
+
+    // A malformed answer is refused by the request schema, not stored.
+    const bad = await call('/device/events', {
+      body: record([{ kind: 'survey', elementId: 'q1', page: 'payment-x' }]),
+    });
+    expect(bad.status).toBe(400);
+  });
 });
 
 describe('vouchers (Studio)', () => {

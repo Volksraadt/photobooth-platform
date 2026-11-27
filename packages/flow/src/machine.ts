@@ -13,10 +13,12 @@ import {
   type SnapshotFrom,
 } from 'xstate';
 import {
+  applyResponse,
   defaultFilterId,
   findFrame,
   idleTimeoutMs,
   pageHasButton,
+  pageResponsesComplete,
   paymentAmount,
   slotCount,
 } from './helpers';
@@ -74,6 +76,11 @@ const firstEmptySlot = (session: FlowSession | null): number | null => {
 const allFilled = (session: FlowSession | null) =>
   !!session && session.shots.length > 0 && session.shots.every((s) => s !== null);
 
+const responseInput = (event: Extract<FlowEvent, { type: 'CONSENT.TOGGLE' | 'SURVEY.SELECT' }>) =>
+  event.type === 'SURVEY.SELECT'
+    ? { elementId: event.elementId, optionId: event.optionId }
+    : { elementId: event.elementId };
+
 const updateSession = (ctx: FlowContext, patch: Partial<FlowSession>): FlowSession | null =>
   ctx.session ? { ...ctx.session, ...patch } : null;
 
@@ -93,6 +100,7 @@ function newSession(context: FlowContext, free: boolean): Partial<FlowContext> {
     takes: [],
     filterId: defaultFilterId(context.config),
     extraPrints: 0,
+    responses: [],
     downloadUrl: null,
     completedAt: null,
   };
@@ -244,6 +252,13 @@ export const flowMachine = setup({
       (context.session?.extraPrints ?? 0) < context.config.pricing.maxExtraPrints,
     canRemovePrint: ({ context }) => (context.session?.extraPrints ?? 0) > 0,
     unpaid: ({ context }) => !context.session?.paid,
+    /** Required consents / questions of the current page are answered (F8). */
+    responsesComplete: ({ context }) =>
+      pageResponsesComplete(context.config, context.page, context.responses),
+    validResponse: ({ context, event }) =>
+      (event.type === 'CONSENT.TOGGLE' || event.type === 'SURVEY.SELECT') &&
+      applyResponse(context.config, context.page, context.responses, responseInput(event), '') !==
+        null,
     resumeCapture: ({ context }) =>
       !!context.session?.paid && context.error?.resumeTo === 'capture',
     resumeProcessing: ({ context }) =>
@@ -260,6 +275,17 @@ export const flowMachine = setup({
       const ms = idleTimeoutMs(context.config, context.page);
       if (ms !== null) enqueue.raise({ type: 'IDLE.TIMEOUT' }, { id: 'idle', delay: ms });
     }),
+    recordResponse: assign(({ context, event }) => {
+      if (event.type !== 'CONSENT.TOGGLE' && event.type !== 'SURVEY.SELECT') return {};
+      const next = applyResponse(
+        context.config,
+        context.page,
+        context.responses,
+        responseInput(event),
+        new Date().toISOString(),
+      );
+      return next ? { responses: next } : {};
+    }),
     startSession: assign(({ context }) => newSession(context, false)),
     startFreeSession: assign(({ context }) => newSession(context, true)),
     endSession: enqueueActions(({ context, enqueue }) => {
@@ -268,6 +294,7 @@ export const flowMachine = setup({
       enqueue('onSessionEnd');
       enqueue.assign({
         session: null,
+        responses: {},
         activeSlot: null,
         retaking: false,
         countdown: null,
@@ -390,6 +417,7 @@ export const flowMachine = setup({
     error: null,
     shotCounter: 0,
     qrisUnavailable: false,
+    responses: {},
   }),
   initial: 'cover',
   on: {
@@ -401,6 +429,9 @@ export const flowMachine = setup({
     FAIL: { target: '.error', actions: 'setUnknownError' },
     'CONFIG.UPDATE': { actions: assign(({ event }) => ({ pendingConfig: event.config })) },
     'ADMIN.OPEN': { guard: 'unpaid', target: '.admin' },
+    // Only acts on elements of the current page (validResponse), so other pages ignore it.
+    'CONSENT.TOGGLE': { guard: 'validResponse', actions: ['recordResponse', 'restartIdle'] },
+    'SURVEY.SELECT': { guard: 'validResponse', actions: ['recordResponse', 'restartIdle'] },
   },
   states: {
     cover: {
@@ -413,19 +444,19 @@ export const flowMachine = setup({
       on: {
         START: [
           {
-            guard: 'tutorialEnabled',
+            guard: and(['responsesComplete', 'tutorialEnabled']),
             target: 'tutorial',
             actions: 'startSession',
           },
-          { target: 'framePick', actions: 'startSession' },
+          { guard: 'responsesComplete', target: 'framePick', actions: 'startSession' },
         ],
         NEXT: [
           {
-            guard: 'tutorialEnabled',
+            guard: and(['responsesComplete', 'tutorialEnabled']),
             target: 'tutorial',
             actions: 'startSession',
           },
-          { target: 'framePick', actions: 'startSession' },
+          { guard: 'responsesComplete', target: 'framePick', actions: 'startSession' },
         ],
         'CONFIG.UPDATE': {
           actions: [
@@ -499,19 +530,27 @@ export const flowMachine = setup({
         },
         NEXT: [
           {
-            guard: and(['hasFrame', 'skipPayment']),
+            guard: and(['hasFrame', 'responsesComplete', 'skipPayment']),
             target: 'capture',
             actions: ['prepareShots', 'markFree'],
           },
-          { guard: 'hasFrame', target: 'payment', actions: 'prepareShots' },
+          {
+            guard: and(['hasFrame', 'responsesComplete']),
+            target: 'payment',
+            actions: 'prepareShots',
+          },
         ],
         CONFIRM: [
           {
-            guard: and(['hasFrame', 'skipPayment']),
+            guard: and(['hasFrame', 'responsesComplete', 'skipPayment']),
             target: 'capture',
             actions: ['prepareShots', 'markFree'],
           },
-          { guard: 'hasFrame', target: 'payment', actions: 'prepareShots' },
+          {
+            guard: and(['hasFrame', 'responsesComplete']),
+            target: 'payment',
+            actions: 'prepareShots',
+          },
         ],
         BACK: [{ guard: 'tutorialEnabled', target: 'tutorial' }, { target: 'cover' }],
       },
@@ -833,9 +872,10 @@ export const flowMachine = setup({
             session: updateSession(context, { filterId: event.filterId }),
           })),
         },
-        CONFIRM: 'processing',
-        NEXT: 'processing',
-        FINISH: 'processing',
+        CONFIRM: { guard: 'responsesComplete', target: 'processing' },
+        NEXT: { guard: 'responsesComplete', target: 'processing' },
+        FINISH: { guard: 'responsesComplete', target: 'processing' },
+        // Paid: the session is never held back by an unanswered question.
         'IDLE.TIMEOUT': 'processing',
         BACK: 'capture',
         RETAKE: { guard: 'canRetake', target: 'capture', actions: 'beginRetake' },
@@ -851,7 +891,10 @@ export const flowMachine = setup({
       ],
       invoke: {
         src: 'processSession',
-        input: ({ context }) => ({ config: context.config, session: context.session! }),
+        input: ({ context }) => ({
+          config: context.config,
+          session: { ...context.session!, responses: Object.values(context.responses) },
+        }),
       },
       on: {
         'PROCESSING.PROGRESS': {

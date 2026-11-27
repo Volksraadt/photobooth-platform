@@ -5,6 +5,7 @@ import {
   flowMachine,
   paymentAmount,
   printSheets,
+  responsesForRenderer,
   uiActionToEvent,
   type CaptureShotInput,
   type FlowEvent,
@@ -180,6 +181,7 @@ function PreviewPlayer({
     printSheets: printSheets(config, session),
     progress: ctx.progress,
     downloadUrl: session?.downloadUrl ?? null,
+    ...responsesForRenderer(ctx.responses),
     canAction: (a) => snapshot.can(uiActionToEvent(a)),
   };
 

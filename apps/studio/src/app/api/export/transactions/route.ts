@@ -18,6 +18,22 @@ const STATUS: Record<string, string> = {
 };
 const MAX_ROWS = 20_000;
 
+type Responses = Awaited<ReturnType<typeof listTransactions>>['rows'][number]['responses'];
+
+/** Ticked consents, one per line in the cell. */
+function consentCell(responses: Responses): string | null {
+  const labels = responses.flatMap((r) => (r.kind === 'consent' ? [r.label] : []));
+  return labels.length ? labels.join('\n') : null;
+}
+
+/** "Question: answer, answer", one question per line in the cell. */
+function surveyCell(responses: Responses): string | null {
+  const lines = responses.flatMap((r) =>
+    r.kind === 'survey' ? [`${r.question || r.elementId}: ${r.optionLabels.join(', ')}`] : [],
+  );
+  return lines.length ? lines.join('\n') : null;
+}
+
 /**
  * CSV / Excel export of the transactions in a range (plan feature `export`). Runs as the signed-in
  * user (RLS), so it can only contain that user's org. Times are in each booth's own timezone.
@@ -79,6 +95,8 @@ export async function GET(req: NextRequest) {
     'Offline',
     'Status',
     'Link Drive',
+    'Persetujuan',
+    'Survei',
   ];
   const body: Cell[][] = rows.map((r) => [
     r.code,
@@ -94,6 +112,8 @@ export async function GET(req: NextRequest) {
     r.offline ? 'ya' : 'tidak',
     STATUS[r.status] ?? r.status,
     r.driveFolderUrl,
+    consentCell(r.responses),
+    surveyCell(r.responses),
   ]);
   const name = `transaksi-${range.from}_${range.to}`;
   if (format === 'xlsx') {

@@ -1,4 +1,4 @@
-import type { BoothConfig } from '@pb/schema';
+import type { BoothConfig, SessionResponse } from '@pb/schema';
 import { and, desc, eq, gt, inArray, isNull, lt, lte, ne, or, sql } from 'drizzle-orm';
 import {
   auditLogs,
@@ -720,6 +720,8 @@ export type SessionSyncInput = SessionRef & {
   paymentMethod: 'qris' | 'voucher' | 'cash' | 'free' | null;
   amount: number;
   extraPrints: number;
+  /** Consent + survey answers (F8). */
+  responses?: SessionResponse[];
   offline: boolean;
 };
 
@@ -749,6 +751,8 @@ export async function syncDeviceSession(db: Db, device: DeviceRef, input: Sessio
         filterId: input.filterId,
         status: input.status === 'capturing' ? existing.status : input.status,
         extraPrints: input.extraPrints,
+        // A resend without answers (older agent) never wipes answers already stored.
+        ...(input.responses?.length ? { responses: input.responses } : {}),
         completedAt: input.completedAt,
         syncedAt: new Date(),
         offline: existing.offline || input.offline,

@@ -396,7 +396,7 @@ describe('migrate v1 → v2: voucher field and keypad become separate elements',
     const r = migrateBoothConfig(v1({ width: 700, height: 280 }));
     expect(r.success).toBe(true);
     if (!r.success) return;
-    expect(r.config.schemaVersion).toBe(2);
+    expect(r.config.schemaVersion).toBe(3);
     const field = r.config.pages.payment.elements.find((e) => e.type === 'voucher-input')!;
     const keypad = r.config.pages.payment.elements.find((e) => e.type === 'voucher-keypad')!;
     // v1: fieldHeight = min(280, 40 × 2.4) = 96; side rows (280 − 24) / 4 = 64;
@@ -416,7 +416,7 @@ describe('migrate v1 → v2: voucher field and keypad become separate elements',
 describe('readable locations in shape errors', () => {
   it('names the section, page and element of a zod issue', () => {
     const old = { ...fresh(), schemaVersion: 1 };
-    expect(issuesOf(old)[0]!.message).toBe('Versi skema desain: nilai tidak valid (seharusnya 2)');
+    expect(issuesOf(old)[0]!.message).toBe('Versi skema desain: nilai tidak valid (seharusnya 3)');
 
     const c = JSON.parse(JSON.stringify(fresh())) as BoothConfig;
     const field = c.pages.payment.elements.find((e) => e.type === 'voucher-input')!;
@@ -425,5 +425,87 @@ describe('readable locations in shape errors', () => {
       .map((i) => i.message)
       .join('\n');
     expect(msg).toContain('Halaman Pembayaran › elemen "Kolom voucher" › gaya teks › ukuran huruf');
+  });
+});
+
+describe('F8: consent-checkbox + survey-question', () => {
+  const text = {
+    fontFamily: 'Inter',
+    fontSize: 28,
+    fontWeight: 400,
+    color: '#111',
+    align: 'left' as const,
+    lineHeight: 1.3,
+    letterSpacing: 0,
+  };
+  const base = {
+    x: 0,
+    y: 0,
+    width: 600,
+    height: 80,
+    rotation: 0,
+    opacity: 1,
+    visible: true,
+    locked: false,
+  };
+  const consent = {
+    ...base,
+    id: 'consent-1',
+    name: 'Persetujuan',
+    type: 'consent-checkbox' as const,
+    label: 'Saya setuju foto disimpan',
+    required: true,
+    textStyle: text,
+    boxSize: 40,
+    boxStyle: { borderColor: '#111', borderWidth: 2 },
+    checkedStyle: { fill: '#111' },
+    checkColor: '#fff',
+  };
+  const question = {
+    ...base,
+    id: 'q-1',
+    name: 'Pertanyaan',
+    type: 'survey-question' as const,
+    question: 'Tahu dari mana?',
+    options: [
+      { id: 'a', label: 'Instagram' },
+      { id: 'b', label: 'Teman' },
+    ],
+    multiple: false,
+    required: true,
+    layout: 'row' as const,
+    columns: 2,
+    gap: 12,
+    optionTextStyle: text,
+    optionStyle: {},
+    selectedStyle: { fill: '#111' },
+  };
+
+  it('accepts them on Cover, Pilih Frame and Review', () => {
+    const c = fresh();
+    c.pages.cover.elements.push(consent);
+    c.pages.framePick.elements.push({ ...question, id: 'q-2' });
+    c.pages.review.elements.push(question);
+    expect(issuesOf(c)).toEqual([]);
+  });
+
+  it('refuses them on other pages and refuses duplicate option ids', () => {
+    const c = fresh();
+    c.pages.payment.elements.push(consent);
+    c.pages.review.elements.push({
+      ...question,
+      options: [
+        { id: 'a', label: 'Instagram' },
+        { id: 'a', label: 'Teman' },
+      ],
+    });
+    const issues = issuesOf(c);
+    expect(issues.map((i) => i.code)).toContain('survey-question.option-ids');
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        code: 'element.wrong-page',
+        path: expect.stringMatching(/^pages\.payment\./),
+      }),
+    );
   });
 });

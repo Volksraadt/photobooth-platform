@@ -6,7 +6,7 @@ import type {
   PrinterStatusSummary,
   TabletCameraState,
 } from '@pb/capture';
-import type { BoothConfig } from '@pb/schema';
+import type { BoothConfig, SessionResponse } from '@pb/schema';
 
 export type AgentConfigState =
   | { status: 'connecting' }
@@ -95,6 +95,7 @@ export type ProcessBody = {
     paymentMethod: string | null;
     amount: number;
     extraPrints: number;
+    responses: SessionResponse[];
     downloadUrl: string | null;
     shots: { slotIndex: number; photoId: string }[];
   };

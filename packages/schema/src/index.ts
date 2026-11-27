@@ -14,3 +14,4 @@ export * from './admin-pin';
 export * from './templates';
 export * from './asset-refs';
 export * from './asset-urls';
+export * from './session-response';

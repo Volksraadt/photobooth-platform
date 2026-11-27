@@ -1,0 +1,1 @@
+ALTER TABLE "sessions" ADD COLUMN "responses" jsonb DEFAULT '[]'::jsonb NOT NULL;

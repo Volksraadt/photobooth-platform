@@ -1,3 +1,4 @@
+import type { SessionResponse } from '@pb/schema';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -68,6 +69,8 @@ export const sessions = pgTable(
     feeAmount: integer('fee_amount').notNull().default(0),
     netAmount: integer('net_amount').notNull().default(0),
     extraPrints: integer('extra_prints').notNull().default(0),
+    /** F8: consent + survey answers (`SessionResponse[]` from @pb/schema). */
+    responses: jsonb('responses').$type<SessionResponse[]>().notNull().default([]),
     startedAt: tz('started_at').notNull(),
     completedAt: tz('completed_at'),
     syncedAt: tz('synced_at'),

@@ -8,7 +8,10 @@ export type FlowUiAction =
   /** voucher-input keypad / keyboard. */
   | { kind: 'voucherKey'; key: string }
   | { kind: 'voucherBackspace' }
-  | { kind: 'voucherSubmit' };
+  | { kind: 'voucherSubmit' }
+  /** consent-checkbox / survey-question (F8). */
+  | { kind: 'toggleConsent'; elementId: string }
+  | { kind: 'selectOption'; elementId: string; optionId: string };
 
 export function uiActionToEvent(action: FlowUiAction): FlowEvent {
   switch (action.kind) {
@@ -44,5 +47,9 @@ export function uiActionToEvent(action: FlowUiAction): FlowEvent {
       return { type: 'VOUCHER.BACKSPACE' };
     case 'voucherSubmit':
       return { type: 'VOUCHER.SUBMIT' };
+    case 'toggleConsent':
+      return { type: 'CONSENT.TOGGLE', elementId: action.elementId };
+    case 'selectOption':
+      return { type: 'SURVEY.SELECT', elementId: action.elementId, optionId: action.optionId };
   }
 }

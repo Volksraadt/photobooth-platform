@@ -29,6 +29,10 @@ import {
   TextElementView,
   VideoElementView,
 } from './elements/static-elements';
+import {
+  ConsentCheckboxElementView,
+  SurveyQuestionElementView,
+} from './elements/response-elements';
 import { elementAnimationCss } from './styles';
 
 function ElementBody({ element }: { element: Element }) {
@@ -71,6 +75,10 @@ function ElementBody({ element }: { element: Element }) {
       return <ProgressElementView el={element} />;
     case 'print-copies':
       return <PrintCopiesElementView el={element} />;
+    case 'consent-checkbox':
+      return <ConsentCheckboxElementView el={element} />;
+    case 'survey-question':
+      return <SurveyQuestionElementView el={element} />;
   }
 }
 

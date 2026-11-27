@@ -1,6 +1,7 @@
 import {
   paymentAmount,
   printSheets,
+  responsesForRenderer,
   uiActionToEvent,
   type FlowSnapshot,
 } from '@pb/flow';
@@ -47,6 +48,7 @@ export function buildRuntime(snapshot: FlowSnapshot, camera: CameraRuntime): Ren
     printSheets: printSheets(config, session),
     progress: context.progress,
     downloadUrl: session?.downloadUrl ?? null,
+    ...responsesForRenderer(context.responses),
     canAction: (action) => snapshot.can(uiActionToEvent(action)),
   };
 }

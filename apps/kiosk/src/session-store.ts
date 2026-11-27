@@ -1,3 +1,4 @@
+import type { SessionResponse } from '@pb/schema';
 /**
  * F1 local session storage in IndexedDB, so results can be inspected (admin → Sesi tersimpan).
  * F3 replaces this with the agent (SQLite + disk + upload queue). Nothing is deleted automatically:
@@ -27,6 +28,8 @@ export type StoredSession = {
   paymentMethod: string | null;
   amount: number;
   extraPrints: number;
+  /** Consent + survey answers (F8); absent in sessions saved before F8. */
+  responses?: SessionResponse[];
   downloadUrl: string;
   /** ISO 8601, UTC. */
   startedAt: string;

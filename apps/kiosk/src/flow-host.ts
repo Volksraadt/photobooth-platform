@@ -92,6 +92,7 @@ async function processInBrowser(
     paymentMethod: session.paymentMethod,
     amount: sessionTotal(config, session),
     extraPrints: session.extraPrints,
+    responses: session.responses,
     downloadUrl,
     startedAt: session.startedAt,
     savedAt: new Date().toISOString(),
@@ -142,6 +143,7 @@ async function processWithAgent(
         paymentMethod: session.paymentMethod,
         amount: sessionTotal(config, session),
         extraPrints: session.extraPrints,
+        responses: session.responses,
         downloadUrl,
         shots: session.shots.flatMap((s) =>
           s ? [{ slotIndex: s.slotIndex, photoId: s.photo.id }] : [],

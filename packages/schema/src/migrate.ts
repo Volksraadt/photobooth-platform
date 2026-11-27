@@ -9,7 +9,17 @@ type Migration = (config: Record<string, unknown>) => Record<string, unknown>;
  */
 const MIGRATIONS: Record<number, Migration> = {
   1: splitVoucherFieldKeypad,
+  2: addResponseElements,
 };
+
+/**
+ * v2 → v3 (F8): adds the `consent-checkbox` and `survey-question` element types. Existing
+ * configs need no change; the bump only stops an older kiosk from loading a design it cannot
+ * draw (it refuses an unknown schemaVersion instead of failing on an unknown element).
+ */
+function addResponseElements(config: Record<string, unknown>): Record<string, unknown> {
+  return { ...config, schemaVersion: 3 };
+}
 
 type RawElement = Record<string, unknown> & {
   id: string;

@@ -1,6 +1,11 @@
 import { composeSheet, composeStrip, encodeImage } from '@pb/compositor';
 import type { ProcessingStep } from '@pb/capture/protocol';
-import { migrateBoothConfig, type BoothConfig, type ValidationIssue } from '@pb/schema';
+import {
+  migrateBoothConfig,
+  SessionResponsesSchema,
+  type BoothConfig,
+  type ValidationIssue,
+} from '@pb/schema';
 import { z } from 'zod';
 import type { AssetStore } from './assets';
 import type { PrintService } from './print/print-service';
@@ -18,6 +23,8 @@ export const ProcessRequestSchema = z.object({
     paymentMethod: z.string().nullable(),
     amount: z.number().int().nonnegative(),
     extraPrints: z.number().int().nonnegative(),
+    /** Consent + survey answers (F8). Older kiosks send none. */
+    responses: SessionResponsesSchema.default([]),
     downloadUrl: z.string().nullable(),
     /** Selected take per slot. */
     shots: z.array(z.object({ slotIndex: z.number().int().min(1), photoId: z.string() })),
@@ -153,6 +160,7 @@ export class Processor {
       paymentMethod: method,
       amount: s.amount,
       extraPrints: s.extraPrints,
+      responses: s.responses,
       offline: !!local?.offline,
     });
 
