@@ -20,7 +20,7 @@ foreach ($p in $node | Where-Object { $_.CommandLine -match 'scripts[\\\\/]booth
   taskkill /T /F /PID $p.ProcessId 2>$null | Out-Null; $n++
 }
 # 2. Leftovers: listeners on the booth ports.
-foreach ($port in @(${PORTS.join(",")})) {
+foreach ($port in @(${PORTS.join(',')})) {
   foreach ($c in @(Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue)) {
     Stop-Process -Id $c.OwningProcess -Force -ErrorAction SilentlyContinue; $n++
   }

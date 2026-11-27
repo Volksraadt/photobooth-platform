@@ -27,7 +27,13 @@ const CONNECTIVITY_TEXT: Record<Connectivity, string> = {
   never: 'belum pernah terhubung',
 };
 
-function Stat(props: { label: string; value: string; hint?: string; href?: string; tone?: 'warn' }) {
+function Stat(props: {
+  label: string;
+  value: string;
+  hint?: string;
+  href?: string;
+  tone?: 'warn';
+}) {
   const body = (
     <CardContent className="space-y-1 pt-5 pb-5">
       <p className="text-xs text-muted-foreground">{props.label}</p>

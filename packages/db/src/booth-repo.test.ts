@@ -2,8 +2,7 @@ import { sha256Hex } from '@pb/crypto';
 import type { BoothConfig } from '@pb/schema';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type {
-  BoothRemovalError} from './booth-repo';
+import type { BoothRemovalError } from './booth-repo';
 import {
   archiveBooth,
   createBoothFromTemplate,
