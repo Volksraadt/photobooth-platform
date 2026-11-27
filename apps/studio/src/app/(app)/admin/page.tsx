@@ -1,4 +1,12 @@
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@pb/ui';
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  PageHeader,
+} from '@pb/ui';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
@@ -40,32 +48,34 @@ export default async function AdminPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Admin platform</h1>
-          <p className="text-sm text-muted-foreground">
+      <PageHeader
+        title="Admin platform"
+        description={
+          <span>
             Semua organisasi, paket, dan statusnya. Setiap perubahan tercatat di log audit
             organisasi terkait.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline">
-            <Link href="/admin/frames" data-testid="admin-frames">
-              Pustaka frame
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/admin/templates" data-testid="admin-templates">
-              Template booth
-            </Link>
-          </Button>
-          <form action={runLifecycleAction}>
-            <Button type="submit" variant="outline" data-testid="run-lifecycle">
-              Jalankan siklus langganan sekarang
+          </span>
+        }
+        actions={
+          <>
+            <Button asChild variant="outline">
+              <Link href="/admin/frames" data-testid="admin-frames">
+                Pustaka frame
+              </Link>
             </Button>
-          </form>
-        </div>
-      </div>
+            <Button asChild variant="outline">
+              <Link href="/admin/templates" data-testid="admin-templates">
+                Template booth
+              </Link>
+            </Button>
+            <form action={runLifecycleAction}>
+              <Button type="submit" variant="outline" data-testid="run-lifecycle">
+                Jalankan siklus langganan sekarang
+              </Button>
+            </form>
+          </>
+        }
+      />
 
       <Card>
         <CardHeader>
@@ -139,7 +149,7 @@ export default async function AdminPage() {
                   <td>
                     {STATE_LABEL[o.state ?? ''] ?? '—'}
                     {o.openInvoices > 0 && (
-                      <span className="text-xs text-amber-700">
+                      <span className="text-xs text-warning">
                         {' '}
                         · {o.openInvoices} tagihan terbuka
                       </span>

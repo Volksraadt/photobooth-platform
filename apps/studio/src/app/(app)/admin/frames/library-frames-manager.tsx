@@ -1,7 +1,17 @@
 'use client';
 
 import type { PhotoSlot } from '@pb/schema';
-import { Alert, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from '@pb/ui';
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  EmptyState,
+} from '@pb/ui';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { detectSlots, readAlpha, STRIP_PX } from '@/lib/detect-slots';
@@ -234,7 +244,7 @@ function FrameItem({ frame }: { frame: AdminLibraryFrame }) {
         <p className="text-muted-foreground">
           {frame.slots.length} slot ·{' '}
           {frame.isPublished ? (
-            <span className="text-emerald-700">tampil untuk owner</span>
+            <span className="text-success">tampil untuk owner</span>
           ) : (
             <span>disembunyikan</span>
           )}
@@ -296,7 +306,7 @@ export function LibraryFramesManager({ frames }: { frames: AdminLibraryFrame[] }
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Isi pustaka ({frames.length})</h2>
         {frames.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Belum ada frame di pustaka.</p>
+          <EmptyState size="compact" title="Belum ada frame di pustaka." />
         ) : (
           <ul className="grid gap-3 lg:grid-cols-2">
             {frames.map((f) => (

@@ -1,5 +1,13 @@
 import { listRefundCandidates } from '@pb/db';
-import { Alert, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@pb/ui';
+import {
+  Alert,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  PageHeader,
+} from '@pb/ui';
 import { apiFetch } from '@/lib/api';
 import { asUser, requireOrg } from '@/lib/org';
 import {
@@ -112,12 +120,10 @@ export default async function IntegrationsPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Integrasi</h1>
-        <p className="text-sm text-muted-foreground">
-          Pembayaran pembeli masuk langsung ke akun Midtrans milik Anda.
-        </p>
-      </div>
+      <PageHeader
+        title="Integrasi"
+        description={<>Pembayaran pembeli masuk langsung ke akun Midtrans milik Anda.</>}
+      />
 
       {!canEdit && <Alert>Hanya owner atau manager yang dapat mengatur integrasi.</Alert>}
       {loadError && <Alert variant="destructive">{loadError}</Alert>}
@@ -141,7 +147,9 @@ export default async function IntegrationsPage({
               <span
                 data-testid="midtrans-summary"
                 className={`rounded px-1.5 py-0.5 text-xs font-normal ${
-                  midtransReady ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                  midtransReady
+                    ? 'bg-success-soft font-medium text-success'
+                    : 'bg-warning-soft font-medium text-warning'
                 }`}
               >
                 {state.mode === 'mock'
@@ -186,7 +194,7 @@ export default async function IntegrationsPage({
                     {state.webhookUrl ?? 'Belum diatur: setel PB_PUBLIC_API_URL di server API.'}
                   </code>
                   {webhookIsLocal && (
-                    <span className="mt-1 block text-amber-700" data-testid="webhook-local">
+                    <span className="mt-1 block text-warning" data-testid="webhook-local">
                       Alamat ini hanya bisa dibuka dari komputer ini, jadi Midtrans tidak bisa
                       mengirim notifikasi ke sana. Setel PB_PUBLIC_API_URL ke alamat publik (mis.
                       domain API atau tunnel). Status lunas tetap terbaca lewat pengecekan berkala.
@@ -210,7 +218,7 @@ export default async function IntegrationsPage({
                     <h2 className="font-medium">
                       {env === 'sandbox' ? 'Sandbox (uji coba)' : 'Production (uang sungguhan)'}
                       {c?.isActive && (
-                        <span className="ml-2 rounded bg-emerald-100 px-1.5 text-xs text-emerald-800">
+                        <span className="ml-2 rounded-full bg-success-soft px-2 text-xs font-medium text-success">
                           aktif
                         </span>
                       )}

@@ -14,7 +14,7 @@ export default async function OnboardingPage() {
     <main className="flex min-h-screen items-center justify-center bg-muted p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Buat organisasi</CardTitle>
+          <CardTitle className="text-xl">Buat organisasi</CardTitle>
           <CardDescription>
             Organisasi menampung semua booth, frame, dan laporan Anda.
           </CardDescription>

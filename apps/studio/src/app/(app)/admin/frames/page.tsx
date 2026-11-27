@@ -1,5 +1,6 @@
+import { PageHeader } from '@pb/ui';
 import type { PhotoSlot } from '@pb/schema';
-import Link from 'next/link';
+import { BackLink } from '@/components/back-link';
 import { notFound } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { requireUser } from '@/lib/auth';
@@ -18,18 +19,18 @@ export default async function AdminFramesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/admin" className="text-sm text-muted-foreground hover:underline">
-          ← Admin platform
-        </Link>
-        <h1 className="text-2xl font-semibold">Pustaka frame bawaan</h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          Frame di sini bisa dipilih semua owner di editor (tab Frame → Pustaka). Unggah PNG strip
-          600×1800 px (rasio 1:3) dengan lubang foto transparan; slot foto dideteksi otomatis dari
-          area transparan. Menghapus atau menyembunyikan frame tidak mengubah booth yang sudah
-          memakainya.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow={<BackLink href="/admin">Admin platform</BackLink>}
+        title="Pustaka frame bawaan"
+        description={
+          <>
+            Frame di sini bisa dipilih semua owner di editor (tab Frame → Pustaka). Unggah PNG strip
+            600×1800 px (rasio 1:3) dengan lubang foto transparan; slot foto dideteksi otomatis dari
+            area transparan. Menghapus atau menyembunyikan frame tidak mengubah booth yang sudah
+            memakainya.
+          </>
+        }
+      />
       <LibraryFramesManager frames={frames} />
     </div>
   );

@@ -4,19 +4,22 @@ import { cn } from './cn';
 export function Card({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
-      className={cn('rounded-lg border bg-card text-card-foreground shadow-sm', className)}
+      className={cn('rounded-lg border bg-card text-card-foreground shadow-xs', className)}
       {...props}
     />
   );
 }
 
 export function CardHeader({ className, ...props }: ComponentProps<'div'>) {
-  return <div className={cn('flex flex-col space-y-1.5 p-6', className)} {...props} />;
+  return <div className={cn('flex flex-col gap-1 p-6', className)} {...props} />;
 }
 
-export function CardTitle({ className, ...props }: ComponentProps<'h3'>) {
+export function CardTitle({ className, ...props }: ComponentProps<'h2'>) {
   return (
-    <h3 className={cn('text-xl font-semibold leading-none tracking-tight', className)} {...props} />
+    <h2
+      className={cn('text-base font-semibold leading-snug tracking-tight', className)}
+      {...props}
+    />
   );
 }
 

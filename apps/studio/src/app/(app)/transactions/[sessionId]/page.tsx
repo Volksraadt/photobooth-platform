@@ -1,6 +1,6 @@
 import { getSessionDetail } from '@pb/db';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@pb/ui';
-import Link from 'next/link';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, PageHeader } from '@pb/ui';
+import { BackLink } from '@/components/back-link';
 import { notFound } from 'next/navigation';
 import { UploadCell } from '@/components/session-upload';
 import { formatDateTime, idr, METHOD_LABEL } from '@/lib/format';
@@ -43,22 +43,24 @@ export default async function SessionDetailPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/transactions" className="text-sm text-muted-foreground hover:underline">
-          ← Transaksi
-        </Link>
-        <h1 className="mt-2 text-2xl font-semibold">
-          Sesi{' '}
-          <span className="font-mono" data-testid="session-code">
-            {s.code}
-          </span>
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {d.boothName} · {d.deviceName ?? 'perangkat tidak diketahui'} · mulai{' '}
-          {formatDateTime(s.startedAt, tz)} ({tz})
-          {s.completedAt ? ` · selesai ${formatDateTime(s.completedAt, tz)}` : ''}
-        </p>
-      </div>
+      <PageHeader
+        eyebrow={<BackLink href="/transactions">Transaksi</BackLink>}
+        title={
+          <>
+            Sesi{' '}
+            <span className="font-mono" data-testid="session-code">
+              {s.code}
+            </span>
+          </>
+        }
+        description={
+          <>
+            {d.boothName} · {d.deviceName ?? 'perangkat tidak diketahui'} · mulai{' '}
+            {formatDateTime(s.startedAt, tz)} ({tz})
+            {s.completedAt ? ` · selesai ${formatDateTime(s.completedAt, tz)}` : ''}
+          </>
+        }
+      />
 
       <div className="grid gap-4 md:grid-cols-[220px_1fr]">
         {/* Narrow screens: payment and files first, the (tall) strip below them. */}

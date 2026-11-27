@@ -90,7 +90,7 @@ export function PlanCheckout({
           ) : (
             <div className="space-y-2">
               {invoice.qrExpired ? (
-                <p className="text-sm text-amber-700">Kode QR sudah kedaluwarsa.</p>
+                <p className="text-sm text-warning">Kode QR sudah kedaluwarsa.</p>
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Buat kode QR untuk membayar tagihan ini.

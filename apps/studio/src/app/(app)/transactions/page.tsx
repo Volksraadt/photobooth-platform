@@ -1,6 +1,7 @@
 import { listBooths, listOrgDevices, listTransactions } from '@pb/db';
-import { Alert, Card, CardContent } from '@pb/ui';
+import { Alert, Card, CardContent, PageHeader, buttonVariants, EmptyState } from '@pb/ui';
 import Link from 'next/link';
+import { ReceiptIcon } from '@/components/icons';
 import { RangeFilter } from '@/components/range-filter';
 import { UploadCell } from '@/components/session-upload';
 import { getEntitlements, recapDays } from '@/lib/entitlements';
@@ -62,18 +63,22 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Transaksi</h1>
-          <p className="text-sm text-muted-foreground">
+      <PageHeader
+        title="Transaksi"
+        description={
+          <span>
             {formatDay(range.from)} – {formatDay(range.to)} · {list.total} sesi. Waktu mengikuti
             zona waktu booth. Sesi dari booth yang offline muncul setelah booth online lagi.
-          </p>
-        </div>
-        <Link className="rounded border px-3 py-1.5 text-sm hover:bg-muted" href={rekapLink}>
-          Lihat rekap →
-        </Link>
-      </div>
+          </span>
+        }
+        actions={
+          <>
+            <Link className={buttonVariants({ variant: 'outline', size: 'sm' })} href={rekapLink}>
+              Lihat rekap →
+            </Link>
+          </>
+        }
+      />
       {range.clamped && (
         <Alert>
           Paket {ent?.planName} menampilkan {recapDays(ent)} hari terakhir.
@@ -93,7 +98,11 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
       <Card>
         <CardContent className="overflow-x-auto pt-6">
           {list.rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Tidak ada sesi pada rentang ini.</p>
+            <EmptyState
+              size="compact"
+              icon={<ReceiptIcon />}
+              title="Tidak ada sesi pada rentang ini."
+            />
           ) : (
             <>
               {/* Narrow screens: one card per session instead of a 9-column table. */}
@@ -169,7 +178,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                       <td>
                         {s.paymentMethod ? METHOD_LABEL[s.paymentMethod] : '—'}
                         {s.offline && (
-                          <span className="ml-1 rounded bg-amber-100 px-1 text-xs text-amber-800">
+                          <span className="ml-1 rounded-full bg-warning-soft px-2 text-xs font-medium text-warning">
                             offline
                           </span>
                         )}

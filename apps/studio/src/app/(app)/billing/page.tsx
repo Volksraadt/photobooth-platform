@@ -1,5 +1,15 @@
 import { listBooths } from '@pb/db';
-import { Alert, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@pb/ui';
+import {
+  Alert,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  PageHeader,
+  EmptyState,
+} from '@pb/ui';
+import { ReceiptIcon } from '@/components/icons';
 import { apiFetch } from '@/lib/api';
 import { formatDateTime, idr, nowMs } from '@/lib/format';
 import { asUser, requireOrg } from '@/lib/org';
@@ -87,13 +97,15 @@ export default async function BillingPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Langganan</h1>
-        <p className="text-sm text-muted-foreground">
-          Langganan dibayar ke akun Midtrans milik platform, terpisah dari pembayaran pembeli di
-          booth Anda (yang masuk ke akun Midtrans Anda sendiri).
-        </p>
-      </div>
+      <PageHeader
+        title="Langganan"
+        description={
+          <>
+            Langganan dibayar ke akun Midtrans milik platform, terpisah dari pembayaran pembeli di
+            booth Anda (yang masuk ke akun Midtrans Anda sendiri).
+          </>
+        }
+      />
       {error && <Alert variant="destructive">{error}</Alert>}
       {state?.billing.mode === 'disabled' && (
         <Alert data-testid="billing-disabled">
@@ -138,7 +150,7 @@ export default async function BillingPage() {
                 . Booth yang sudah ada tetap berjalan.
               </p>
               {starter?.limits.maxBooths != null && boothCount > starter.limits.maxBooths && (
-                <p className="text-amber-700" data-testid="plan-over-starter">
+                <p className="text-warning" data-testid="plan-over-starter">
                   Anda punya {boothCount} booth, sedangkan Starter hanya {starter.limits.maxBooths}.
                   Setelah turun paket, booth baru tidak bisa dibuat sampai jumlahnya sesuai batas.
                 </p>
@@ -234,7 +246,7 @@ export default async function BillingPage() {
         </CardHeader>
         <CardContent>
           {!state || state.invoices.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Belum ada tagihan.</p>
+            <EmptyState size="compact" icon={<ReceiptIcon />} title="Belum ada tagihan." />
           ) : (
             <table className="data-table w-full text-sm" data-testid="invoice-list">
               <thead className="text-left text-muted-foreground">

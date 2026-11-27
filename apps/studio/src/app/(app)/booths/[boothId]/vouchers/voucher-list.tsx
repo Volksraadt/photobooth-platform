@@ -154,13 +154,15 @@ export function VoucherList({
               <span
                 className={
                   v.status === 'available'
-                    ? 'text-xs text-emerald-700'
+                    ? 'text-xs text-success'
                     : 'text-xs text-muted-foreground'
                 }
               >
                 {v.statusLabel}
                 {v.usedOffline && (
-                  <span className="ml-1 rounded bg-amber-100 px-1 text-amber-800">offline</span>
+                  <span className="ml-1 rounded-full bg-warning-soft px-2 font-medium text-warning">
+                    offline
+                  </span>
                 )}
               </span>
             </li>

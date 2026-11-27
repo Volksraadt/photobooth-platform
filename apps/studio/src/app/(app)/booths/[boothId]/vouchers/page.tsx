@@ -1,6 +1,15 @@
 import { getBooth, listBoothVouchers } from '@pb/db';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@pb/ui';
-import Link from 'next/link';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  PageHeader,
+  EmptyState,
+} from '@pb/ui';
+import { TicketIcon } from '@/components/icons';
+import { BackLink } from '@/components/back-link';
 import { notFound } from 'next/navigation';
 import { formatInZone } from '@/lib/timezones';
 import { asUser, requireOrg } from '@/lib/org';
@@ -47,15 +56,11 @@ export default async function VouchersPage({ params }: { params: Promise<{ booth
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href={`/booths/${boothId}`} className="text-sm text-muted-foreground hover:underline">
-          ← {booth.name}
-        </Link>
-        <h1 className="mt-2 text-2xl font-semibold">Voucher</h1>
-        <p className="text-sm text-muted-foreground">
-          {rows.length} voucher · {used} terpakai · {available} tersedia
-        </p>
-      </div>
+      <PageHeader
+        eyebrow={<BackLink href={`/booths/${boothId}`}>{booth.name}</BackLink>}
+        title="Voucher"
+        description={`${rows.length} voucher · ${used} terpakai · ${available} tersedia`}
+      />
 
       {canEdit && (
         <Card>
@@ -95,7 +100,7 @@ export default async function VouchersPage({ params }: { params: Promise<{ booth
         </CardHeader>
         <CardContent>
           {rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Belum ada voucher.</p>
+            <EmptyState size="compact" icon={<TicketIcon />} title="Belum ada voucher." />
           ) : (
             <VoucherList boothId={boothId} boothName={booth.name} rows={rows} canReveal={canEdit} />
           )}

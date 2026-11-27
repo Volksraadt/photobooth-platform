@@ -502,11 +502,12 @@ export class AgentStore {
     );
   }
 
-  markSessionUploaded(id: string) {
+  /** `atIso` comes from the caller's clock so the retention cutoff is computed on the same clock. */
+  markSessionUploaded(id: string, atIso: string = now()) {
     this.run(
       `update local_sessions set sync_status = 'uploaded', uploaded_at = ?, upload_error = null,
          upload_next_at = null, updated_at = ? where id = ?`,
-      now(),
+      atIso,
       now(),
       id,
     );

@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Button, Input } from '@pb/ui';
+import { Alert, Button, Input, EmptyState } from '@pb/ui';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { deleteTemplateAction, updateTemplateAction } from './actions';
@@ -39,7 +39,7 @@ function TemplateItem({ t }: { t: AdminTemplate }) {
         <span className="rounded bg-muted px-1.5 text-[11px]">
           {t.key ? 'Bawaan' : 'Dari booth'}
         </span>
-        <span className={t.isPublic ? 'text-emerald-700' : 'text-muted-foreground'}>
+        <span className={t.isPublic ? 'text-success' : 'text-muted-foreground'}>
           {t.isPublic ? 'tampil untuk owner' : 'disembunyikan'}
         </span>
       </div>
@@ -110,8 +110,7 @@ function TemplateItem({ t }: { t: AdminTemplate }) {
 }
 
 export function TemplatesManager({ templates }: { templates: AdminTemplate[] }) {
-  if (templates.length === 0)
-    return <p className="text-sm text-muted-foreground">Belum ada template.</p>;
+  if (templates.length === 0) return <EmptyState size="compact" title="Belum ada template." />;
   return (
     <ul className="grid gap-3 md:grid-cols-2">
       {templates.map((t) => (

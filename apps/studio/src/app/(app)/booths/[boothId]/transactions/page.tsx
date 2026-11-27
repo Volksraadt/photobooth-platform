@@ -4,8 +4,18 @@ import {
   listRefundCandidates,
   listUploadJobsForSessions,
 } from '@pb/db';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@pb/ui';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  PageHeader,
+  EmptyState,
+} from '@pb/ui';
 import Link from 'next/link';
+import { ReceiptIcon } from '@/components/icons';
+import { BackLink } from '@/components/back-link';
 import { notFound } from 'next/navigation';
 import { formatInZone } from '@/lib/timezones';
 import { asUser, requireOrg } from '@/lib/org';
@@ -59,15 +69,11 @@ export default async function TransactionsPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href={`/booths/${boothId}`} className="text-sm text-muted-foreground hover:underline">
-          ← {booth.name}
-        </Link>
-        <h1 className="mt-2 text-2xl font-semibold">Transaksi</h1>
-        <p className="text-sm text-muted-foreground">
-          100 sesi terakhir. Sesi dari booth yang sedang offline muncul setelah booth online lagi.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow={<BackLink href={`/booths/${boothId}`}>{booth.name}</BackLink>}
+        title="Transaksi"
+        description="100 sesi terakhir. Sesi dari booth yang sedang offline muncul setelah booth online lagi."
+      />
 
       {refunds.length > 0 && (
         <Card>
@@ -97,7 +103,7 @@ export default async function TransactionsPage({
       <Card>
         <CardContent className="pt-6">
           {sessions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Belum ada sesi.</p>
+            <EmptyState size="compact" icon={<ReceiptIcon />} title="Belum ada sesi." />
           ) : (
             <table className="data-table w-full text-sm" data-testid="session-list">
               <thead className="text-left text-muted-foreground">
@@ -128,7 +134,7 @@ export default async function TransactionsPage({
                     <td>
                       {s.paymentMethod ? METHOD[s.paymentMethod] : '—'}
                       {s.offline && (
-                        <span className="ml-1 rounded bg-amber-100 px-1 text-xs text-amber-800">
+                        <span className="ml-1 rounded-full bg-warning-soft px-2 text-xs font-medium text-warning">
                           offline
                         </span>
                       )}

@@ -1,6 +1,17 @@
 import { deviceConnectivity, listOrgDevices, listUploadQueue, type Connectivity } from '@pb/db';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@pb/ui';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  PageHeader,
+  EmptyState,
+  Badge,
+  Button,
+} from '@pb/ui';
 import Link from 'next/link';
+import { MonitorIcon } from '@/components/icons';
 import { RetryUploadButton } from '@/app/(app)/booths/[boothId]/transactions/retry-button';
 import { JOB_ERROR_TEXT } from '@/lib/upload-status';
 import { agoText, formatDateTime, nowMs } from '@/lib/format';
@@ -9,12 +20,15 @@ import { asUser, requireOrg } from '@/lib/org';
 import { revokeDeviceFromListAction } from './actions';
 import { PaperForm } from './paper-form';
 
-const CONNECTIVITY: Record<Connectivity, { label: string; cls: string }> = {
-  online: { label: 'online', cls: 'bg-emerald-100 text-emerald-800' },
-  stale: { label: 'tidak responsif', cls: 'bg-amber-100 text-amber-800' },
-  offline: { label: 'offline', cls: 'bg-red-100 text-red-800' },
-  revoked: { label: 'dicabut', cls: 'bg-muted text-muted-foreground' },
-  never: { label: 'belum pernah terhubung', cls: 'bg-muted text-muted-foreground' },
+const CONNECTIVITY: Record<
+  Connectivity,
+  { label: string; variant: 'success' | 'warning' | 'destructive' | 'neutral' }
+> = {
+  online: { label: 'online', variant: 'success' },
+  stale: { label: 'tidak responsif', variant: 'warning' },
+  offline: { label: 'offline', variant: 'destructive' },
+  revoked: { label: 'dicabut', variant: 'neutral' },
+  never: { label: 'belum pernah terhubung', variant: 'neutral' },
 };
 const COMPONENT: Record<string, string> = {
   ok: 'baik',
@@ -37,20 +51,31 @@ export default async function DevicesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Perangkat</h1>
-        <p className="text-sm text-muted-foreground">
-          Perangkat dianggap <b>offline</b> bila tidak memberi kabar lebih dari 5 menit. Untuk
-          memasang perangkat baru, buka{' '}
-          <Link href="/booths" className="underline">
-            halaman booth
-          </Link>{' '}
-          lalu masukkan kode 6 digit yang tampil di Kiosk.
-        </p>
-      </div>
+      <PageHeader
+        title="Perangkat"
+        description={
+          <>
+            Perangkat dianggap <b>offline</b> bila tidak memberi kabar lebih dari 5 menit. Untuk
+            memasang perangkat baru, buka{' '}
+            <Link href="/booths" className="underline">
+              halaman booth
+            </Link>{' '}
+            lalu masukkan kode 6 digit yang tampil di Kiosk.
+          </>
+        }
+      />
 
       {devices.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Belum ada perangkat.</p>
+        <EmptyState
+          icon={<MonitorIcon />}
+          title="Belum ada perangkat."
+          description="Buka Kiosk di laptop booth, lalu masukkan kode 6 digit yang tampil di halaman booth."
+          action={
+            <Button asChild variant="outline" size="sm">
+              <Link href="/booths">Ke halaman booth</Link>
+            </Button>
+          }
+        />
       ) : (
         <div className="space-y-4" data-testid="device-cards">
           {devices.map((d) => {
@@ -66,13 +91,14 @@ export default async function DevicesPage() {
                 <CardHeader>
                   <CardTitle className="flex flex-wrap items-center gap-2 text-base">
                     {d.name}
-                    <span
-                      className={`rounded px-1.5 py-0.5 text-xs font-normal ${CONNECTIVITY[c].cls}`}
+                    <Badge
+                      variant={CONNECTIVITY[c].variant}
+                      dot
                       data-testid={`device-status-${d.id}`}
                       data-status={c}
                     >
                       {CONNECTIVITY[c].label}
-                    </span>
+                    </Badge>
                   </CardTitle>
                   <CardDescription>
                     {d.boothName ?? 'tanpa booth'} · terakhir memberi kabar{' '}
@@ -89,7 +115,7 @@ export default async function DevicesPage() {
                     </div>
                     <div>
                       <dt className="text-xs text-muted-foreground">Versi desain di perangkat</dt>
-                      <dd className={behind ? 'text-amber-700' : ''}>
+                      <dd className={behind ? 'text-warning' : ''}>
                         {!d.lastConfigVersion
                           ? 'Belum menerima desain'
                           : behind
@@ -107,7 +133,7 @@ export default async function DevicesPage() {
                     </div>
                   </dl>
                   {pending > 0 && (
-                    <p className="text-amber-700" data-testid={`unsynced-${d.id}`}>
+                    <p className="text-warning" data-testid={`unsynced-${d.id}`}>
                       Belum tersinkron: {d.outboxPending ?? 0} catatan dan {d.uploadsPending ?? 0}{' '}
                       sesi menunggu unggah (data terakhir dilaporkan booth).
                     </p>

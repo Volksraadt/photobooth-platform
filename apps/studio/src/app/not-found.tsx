@@ -7,7 +7,7 @@ export default function NotFound() {
       <p className="text-sm text-muted-foreground">
         Halaman ini tidak ada atau Anda tidak punya akses.
       </p>
-      <Link href="/booths" className="text-sm text-primary hover:underline">
+      <Link href="/booths" className="mt-2 text-sm font-medium text-primary hover:underline">
         Kembali ke daftar booth
       </Link>
     </main>

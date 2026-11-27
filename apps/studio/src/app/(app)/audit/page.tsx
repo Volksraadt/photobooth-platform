@@ -1,7 +1,8 @@
 import { describeAuditEntities, listAuditActions, listAuditLogs } from '@pb/db';
-import { Alert, Button, Card, CardContent } from '@pb/ui';
+import { Alert, Button, Card, CardContent, PageHeader, EmptyState } from '@pb/ui';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { ListIcon } from '@/components/icons';
 import { getEntitlements, hasFeature } from '@/lib/entitlements';
 import { formatDateTime, nowMs } from '@/lib/format';
 import { asUser, requireOrg } from '@/lib/org';
@@ -75,13 +76,15 @@ export default async function AuditPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Log audit</h1>
-        <p className="text-sm text-muted-foreground">
-          Perubahan desain, kredensial, voucher, pembayaran tunai, perangkat, dan langganan. Catatan
-          ini tidak bisa diubah atau dihapus.
-        </p>
-      </div>
+      <PageHeader
+        title="Log audit"
+        description={
+          <>
+            Perubahan desain, kredensial, voucher, pembayaran tunai, perangkat, dan langganan.
+            Catatan ini tidak bisa diubah atau dihapus.
+          </>
+        }
+      />
       {!full && (
         <Alert data-testid="audit-limit">
           Paket {ent?.planName} menampilkan 30 hari terakhir. Riwayat lengkap tersedia di paket
@@ -109,7 +112,7 @@ export default async function AuditPage({
       <Card>
         <CardContent className="overflow-x-auto pt-6">
           {logs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Belum ada catatan.</p>
+            <EmptyState size="compact" icon={<ListIcon />} title="Belum ada catatan." />
           ) : (
             <table className="data-table w-full text-sm" data-testid="audit-list">
               <thead className="text-left text-muted-foreground">

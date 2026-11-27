@@ -1,4 +1,5 @@
-import Link from 'next/link';
+import { PageHeader } from '@pb/ui';
+import { BackLink } from '@/components/back-link';
 import { notFound } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { requireUser } from '@/lib/auth';
@@ -14,17 +15,17 @@ export default async function AdminTemplatesPage() {
   const { templates } = (await res.json()) as { templates: AdminTemplate[] };
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/admin" className="text-sm text-muted-foreground hover:underline">
-          ← Admin platform
-        </Link>
-        <h1 className="text-2xl font-semibold">Template booth</h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          Template tampil di galeri saat owner membuat booth baru. Untuk menambah template, buka
-          booth yang desainnya sudah jadi lalu pilih <b>Simpan sebagai template</b> (hanya terlihat
-          oleh admin platform). Template bawaan bisa disembunyikan, tetapi tidak dihapus.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow={<BackLink href="/admin">Admin platform</BackLink>}
+        title="Template booth"
+        description={
+          <>
+            Template tampil di galeri saat owner membuat booth baru. Untuk menambah template, buka
+            booth yang desainnya sudah jadi lalu pilih <b>Simpan sebagai template</b> (hanya
+            terlihat oleh admin platform). Template bawaan bisa disembunyikan, tetapi tidak dihapus.
+          </>
+        }
+      />
       <TemplatesManager templates={templates} />
     </div>
   );

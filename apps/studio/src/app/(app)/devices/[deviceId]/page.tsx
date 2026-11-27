@@ -1,6 +1,6 @@
 import { getDevice, listDeviceEvents, listEventKinds } from '@pb/db';
-import { Button, Card, CardContent } from '@pb/ui';
-import Link from 'next/link';
+import { Button, Card, CardContent, PageHeader } from '@pb/ui';
+import { BackLink } from '@/components/back-link';
 import { notFound } from 'next/navigation';
 import { formatDateTime } from '@/lib/format';
 import { asUser, requireOrg } from '@/lib/org';
@@ -8,7 +8,7 @@ import { asUser, requireOrg } from '@/lib/org';
 const LEVELS = { info: 'Info', warn: 'Peringatan', error: 'Error' } as const;
 const LEVEL_CLS: Record<string, string> = {
   info: 'text-muted-foreground',
-  warn: 'text-amber-700',
+  warn: 'text-warning',
   error: 'text-destructive',
 };
 
@@ -38,15 +38,11 @@ export default async function DeviceLogPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/devices" className="text-sm text-muted-foreground hover:underline">
-          ← Perangkat
-        </Link>
-        <h1 className="mt-2 text-2xl font-semibold">Log: {data.device.name}</h1>
-        <p className="text-sm text-muted-foreground">
-          200 kejadian terbaru. Waktu mengikuti zona {tz}.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow={<BackLink href="/devices">Perangkat</BackLink>}
+        title={`Log: ${data.device.name}`}
+        description={<>200 kejadian terbaru. Waktu mengikuti zona {tz}.</>}
+      />
       <form
         className="flex flex-wrap items-end gap-3 rounded border bg-background p-3 text-sm"
         data-testid="event-filter"

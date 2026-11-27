@@ -9,8 +9,19 @@ import {
   listUploadQueue,
 } from '@pb/db';
 import { upgradeBoothConfig, type BoothConfig } from '@pb/schema';
-import { Alert, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@pb/ui';
+import {
+  Alert,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  PageHeader,
+  EmptyState,
+  Badge,
+} from '@pb/ui';
 import Link from 'next/link';
+import { CameraIcon, ChevronRightIcon } from '@/components/icons';
 import { OrgOverview, type OverviewData } from '@/components/org-overview';
 import { idr, nowMs } from '@/lib/format';
 import { asUser, requireOrg } from '@/lib/org';
@@ -89,12 +100,10 @@ export default async function BoothsPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Booth</h1>
-        <p className="text-sm text-muted-foreground">
-          Setiap booth punya desain, harga, dan perangkatnya sendiri.
-        </p>
-      </div>
+      <PageHeader
+        title="Booth"
+        description={<>Setiap booth punya desain, harga, dan perangkatnya sendiri.</>}
+      />
 
       {deleted && (
         <Alert variant="success" data-testid="booth-deleted">
@@ -105,24 +114,42 @@ export default async function BoothsPage({
       <OrgOverview data={overview} />
 
       {activeBooths.length === 0 ? (
-        <p className="rounded-lg border border-dashed bg-background p-8 text-center text-sm text-muted-foreground">
-          {archivedBooths.length ? 'Tidak ada booth aktif.' : 'Belum ada booth.'}
-        </p>
+        <EmptyState
+          icon={<CameraIcon />}
+          title={archivedBooths.length ? 'Tidak ada booth aktif.' : 'Belum ada booth.'}
+          description={
+            canEdit
+              ? 'Buat booth pertama Anda dari template di bawah, lalu atur desainnya di editor.'
+              : 'Owner atau manager organisasi dapat membuat booth.'
+          }
+        />
       ) : (
-        <ul className="divide-y rounded-lg border bg-background" data-testid="booth-list">
+        <ul
+          className="divide-y overflow-hidden rounded-lg border bg-background shadow-xs"
+          data-testid="booth-list"
+        >
           {activeBooths.map((b) => {
             const p = perBooth.get(b.id);
             return (
               <li key={b.id}>
                 <Link
                   href={`/booths/${b.id}`}
-                  className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 p-4 hover:bg-muted/50"
+                  className="group flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 py-4 transition-colors hover:bg-muted/50 focus-visible:bg-muted/50"
                 >
-                  <div className="min-w-0">
-                    <div className="font-medium">{b.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {timezoneLabel(b.timezone)} ·{' '}
-                      {b.activeConfigId ? 'Sudah dipublikasikan' : 'Draft (belum dipublikasikan)'}
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary">
+                      <CameraIcon className="size-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">{b.name}</div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        {timezoneLabel(b.timezone)}
+                        {b.activeConfigId ? (
+                          <Badge variant="success">Sudah dipublikasikan</Badge>
+                        ) : (
+                          <Badge>Draft (belum dipublikasikan)</Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
@@ -130,12 +157,10 @@ export default async function BoothsPage({
                       Hari ini: <b className="text-foreground">{idr(p?.gross ?? 0)}</b> ·{' '}
                       {p?.sessions ?? 0} sesi
                     </span>
-                    <span className={p && p.online > 0 ? 'text-emerald-700' : ''}>
+                    <span className={p && p.online > 0 ? 'text-success' : ''}>
                       {p?.total ? `${p.online}/${p.total} perangkat online` : 'Belum ada perangkat'}
                     </span>
-                    <span aria-hidden className="text-base">
-                      ›
-                    </span>
+                    <ChevronRightIcon className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                   </div>
                 </Link>
               </li>
@@ -145,7 +170,10 @@ export default async function BoothsPage({
       )}
 
       {archivedBooths.length > 0 && (
-        <details className="rounded-lg border bg-background" data-testid="archived-booths">
+        <details
+          className="rounded-lg border bg-background shadow-xs"
+          data-testid="archived-booths"
+        >
           <summary className="cursor-pointer p-4 text-sm text-muted-foreground">
             Booth diarsipkan ({archivedBooths.length})
           </summary>
@@ -175,7 +203,7 @@ export default async function BoothsPage({
           </CardHeader>
           <CardContent>
             {atLimit ? (
-              <p className="text-sm text-amber-700" data-testid="booth-limit">
+              <p className="text-sm text-warning" data-testid="booth-limit">
                 Paket {plan?.name} dibatasi {maxBooths} booth. Upgrade paket untuk menambah booth.
               </p>
             ) : (

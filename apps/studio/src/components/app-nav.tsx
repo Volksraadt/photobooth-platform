@@ -10,7 +10,10 @@ export function AppNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
   return (
-    <nav className="-mb-px flex gap-5 overflow-x-auto text-sm" aria-label="Navigasi utama">
+    <nav
+      className="-mb-px -mx-2 flex gap-1 overflow-x-auto text-sm [scrollbar-width:none]"
+      aria-label="Navigasi utama"
+    >
       {items.map((item) => {
         const active = isActive(item.href);
         return (
@@ -19,10 +22,10 @@ export function AppNav({ items }: { items: NavItem[] }) {
             href={item.href}
             data-testid={item.testId}
             aria-current={active ? 'page' : undefined}
-            className={`whitespace-nowrap border-b-2 py-2.5 transition-colors ${
+            className={`relative whitespace-nowrap px-2 py-3 font-medium transition-colors after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full focus-visible:outline-offset-[-2px] ${
               active
-                ? 'border-primary font-medium text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
+                ? 'text-foreground after:bg-primary'
+                : 'text-muted-foreground after:bg-transparent hover:text-foreground'
             }`}
           >
             {item.label}

@@ -1,9 +1,4 @@
-import {
-  paymentAmount,
-  printSheets,
-  uiActionToEvent,
-  type FlowSnapshot,
-} from '@pb/flow';
+import { paymentAmount, printSheets, uiActionToEvent, type FlowSnapshot } from '@pb/flow';
 import type { CameraRuntime, RenderRuntime, RuntimePhoto } from '@pb/renderer';
 import type { BoothConfig } from '@pb/schema';
 

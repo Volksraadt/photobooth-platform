@@ -168,7 +168,7 @@ export class UploadQueue {
       });
 
       // Confirmed by the API: only now may the local copy go.
-      this.store.markSessionUploaded(session.id);
+      this.store.markSessionUploaded(session.id, this.now().toISOString());
       this.telemetry.report(null);
       this.event('session_uploaded', `Sesi ${session.code} terunggah`, 'info', {
         sessionId: session.id,

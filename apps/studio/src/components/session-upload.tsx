@@ -11,11 +11,11 @@ export function UploadCell({
   const u = uploadState(session, jobs);
   const tone =
     u.kind === 'done'
-      ? 'text-emerald-700'
+      ? 'text-success'
       : u.kind === 'failed'
         ? 'text-destructive'
         : u.kind === 'retrying'
-          ? 'text-amber-700'
+          ? 'text-warning'
           : 'text-muted-foreground';
   return (
     <div className="space-y-1">

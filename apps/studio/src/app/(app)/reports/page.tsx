@@ -5,8 +5,19 @@ import {
   listRefundCandidates,
   listUnsyncedDevices,
 } from '@pb/db';
-import { Alert, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@pb/ui';
+import {
+  Alert,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  PageHeader,
+  buttonVariants,
+  EmptyState,
+} from '@pb/ui';
 import Link from 'next/link';
+import { ChartIcon } from '@/components/icons';
 import { BarChart } from '@/components/bar-chart';
 import { RangeFilter } from '@/components/range-filter';
 import { getEntitlements, hasFeature, recapDays } from '@/lib/entitlements';
@@ -49,50 +60,52 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Rekap penjualan</h1>
-          <p className="text-sm text-muted-foreground" data-testid="report-range">
+      <PageHeader
+        title="Rekap penjualan"
+        description={
+          <span data-testid="report-range">
             {formatDay(range.from)} – {formatDay(range.to)} · tanggal dan jam mengikuti zona waktu
             tiap booth
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <Link
-            className="rounded border px-3 py-1.5 hover:bg-muted"
-            href={`/transactions?${query}`}
-          >
-            Lihat daftar transaksi →
-          </Link>
-          {canExport ? (
-            <>
-              <a
-                className="rounded border px-3 py-1.5 hover:bg-muted"
-                href={`/api/export/transactions?${query}&format=csv`}
-                data-testid="export-csv"
-                title="Daftar transaksi pada rentang dan filter ini (waktu mengikuti zona booth)"
-              >
-                Unduh CSV
-              </a>
-              <a
-                className="rounded border px-3 py-1.5 hover:bg-muted"
-                href={`/api/export/transactions?${query}&format=xlsx`}
-                data-testid="export-xlsx"
-                title="Daftar transaksi pada rentang dan filter ini (waktu mengikuti zona booth)"
-              >
-                Unduh Excel
-              </a>
-            </>
-          ) : (
-            <span className="text-xs text-muted-foreground" data-testid="export-locked">
-              Ekspor CSV/Excel di paket Pro dan Business.{' '}
-              <Link href="/billing" className="underline">
-                Lihat paket
-              </Link>
-            </span>
-          )}
-        </div>
-      </div>
+          </span>
+        }
+        actions={
+          <>
+            <Link
+              className={buttonVariants({ variant: 'outline', size: 'sm' })}
+              href={`/transactions?${query}`}
+            >
+              Lihat daftar transaksi →
+            </Link>
+            {canExport ? (
+              <>
+                <a
+                  className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                  href={`/api/export/transactions?${query}&format=csv`}
+                  data-testid="export-csv"
+                  title="Daftar transaksi pada rentang dan filter ini (waktu mengikuti zona booth)"
+                >
+                  Unduh CSV
+                </a>
+                <a
+                  className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                  href={`/api/export/transactions?${query}&format=xlsx`}
+                  data-testid="export-xlsx"
+                  title="Daftar transaksi pada rentang dan filter ini (waktu mengikuti zona booth)"
+                >
+                  Unduh Excel
+                </a>
+              </>
+            ) : (
+              <span className="text-xs text-muted-foreground" data-testid="export-locked">
+                Ekspor CSV/Excel di paket Pro dan Business.{' '}
+                <Link href="/billing" className="underline">
+                  Lihat paket
+                </Link>
+              </span>
+            )}
+          </>
+        }
+      />
 
       {range.clamped && (
         <Alert data-testid="recap-limit">
@@ -217,7 +230,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           </CardHeader>
           <CardContent>
             {report.booths.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Belum ada penjualan.</p>
+              <EmptyState size="compact" icon={<ChartIcon />} title="Belum ada penjualan." />
             ) : (
               <table className="data-table w-full text-sm" data-testid="booth-table">
                 <thead className="text-left text-muted-foreground">
@@ -248,7 +261,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           </CardHeader>
           <CardContent>
             {report.frames.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Belum ada data.</p>
+              <EmptyState size="compact" icon={<ChartIcon />} title="Belum ada data." />
             ) : (
               <ol className="divide-y text-sm" data-testid="frame-list">
                 {report.frames.map((f) => (
@@ -269,7 +282,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           </CardHeader>
           <CardContent>
             {report.filters.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Belum ada data.</p>
+              <EmptyState size="compact" icon={<ChartIcon />} title="Belum ada data." />
             ) : (
               <ol className="divide-y text-sm" data-testid="filter-list">
                 {report.filters.map((f) => (

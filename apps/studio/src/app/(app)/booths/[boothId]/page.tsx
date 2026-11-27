@@ -1,7 +1,20 @@
 import { boothSessionCount, getBooth, getOrgPlan, listConfigVersions, listDevices } from '@pb/db';
 import { migrateBoothConfig } from '@pb/schema';
-import { Alert, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@pb/ui';
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  PageHeader,
+  Badge,
+  EmptyState,
+} from '@pb/ui';
 import Link from 'next/link';
+import { MonitorIcon } from '@/components/icons';
+import { BackLink } from '@/components/back-link';
 import { notFound } from 'next/navigation';
 import { ConfirmSubmit } from '@/components/confirm-submit';
 import { idr, METHOD_LABEL } from '@/lib/format';
@@ -61,37 +74,42 @@ export default async function BoothPage({ params }: { params: Promise<{ boothId:
           di bagian bawah halaman bila ingin memakainya lagi.
         </Alert>
       )}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <Link href="/booths" className="text-sm text-muted-foreground hover:underline">
-            ← Semua booth
-          </Link>
-          <h1 className="mt-2 text-2xl font-semibold" data-testid="booth-name">
-            {row.booth.name}
-          </h1>
-          <p className="text-sm text-muted-foreground" data-testid="booth-status">
+      <PageHeader
+        eyebrow={<BackLink href="/booths">Semua booth</BackLink>}
+        title={row.booth.name}
+        titleProps={{ 'data-testid': 'booth-name' }}
+        description={
+          <span className="flex flex-wrap items-center gap-2" data-testid="booth-status">
             {timezoneLabel(tz)} ·{' '}
-            {active ? `Versi aktif v${active.version}` : 'Belum dipublikasikan'}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline">
-            <Link href={`/booths/${boothId}/vouchers`} data-testid="open-vouchers">
-              Voucher
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href={`/booths/${boothId}/transactions`} data-testid="open-transactions">
-              Transaksi
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href={`/booths/${boothId}/editor`} data-testid="open-editor">
-              {canEdit ? 'Buka editor' : 'Lihat desain'}
-            </Link>
-          </Button>
-        </div>
-      </div>
+            {active ? (
+              <Badge variant="success" dot>
+                Versi aktif v{active.version}
+              </Badge>
+            ) : (
+              <Badge>Belum dipublikasikan</Badge>
+            )}
+          </span>
+        }
+        actions={
+          <>
+            <Button asChild variant="outline">
+              <Link href={`/booths/${boothId}/vouchers`} data-testid="open-vouchers">
+                Voucher
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href={`/booths/${boothId}/transactions`} data-testid="open-transactions">
+                Transaksi
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href={`/booths/${boothId}/editor`} data-testid="open-editor">
+                {canEdit ? 'Buka editor' : 'Lihat desain'}
+              </Link>
+            </Button>
+          </>
+        }
+      />
 
       <Card>
         <CardHeader>
@@ -215,14 +233,14 @@ export default async function BoothPage({ params }: { params: Promise<{ boothId:
             <PairDeviceForm boothId={boothId} />
           ) : (
             canEdit && (
-              <p className="text-sm text-amber-700" data-testid="device-limit">
+              <p className="text-sm text-warning" data-testid="device-limit">
                 Batas perangkat paket {plan?.name} tercapai. Cabut perangkat lama atau upgrade
                 paket.
               </p>
             )
           )}
           {devices.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Belum ada perangkat.</p>
+            <EmptyState size="compact" icon={<MonitorIcon />} title="Belum ada perangkat." />
           ) : (
             <ul className="divide-y rounded border text-sm" data-testid="device-list">
               {devices.map((d) => {
@@ -239,7 +257,7 @@ export default async function BoothPage({ params }: { params: Promise<{ boothId:
                     <div>
                       <div className="font-medium">
                         {d.name}{' '}
-                        <span className={online ? 'text-emerald-600' : 'text-muted-foreground'}>
+                        <span className={online ? 'text-success' : 'text-muted-foreground'}>
                           {d.revokedAt ? '· dicabut' : online ? '· online' : '· offline'}
                         </span>
                       </div>
@@ -279,7 +297,7 @@ export default async function BoothPage({ params }: { params: Promise<{ boothId:
         </CardHeader>
         <CardContent>
           {versions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Belum ada versi yang dipublikasikan.</p>
+            <EmptyState size="compact" title="Belum ada versi yang dipublikasikan." />
           ) : (
             <ul className="divide-y rounded border text-sm" data-testid="version-list">
               {versions.map((v) => (
@@ -291,7 +309,7 @@ export default async function BoothPage({ params }: { params: Promise<{ boothId:
                   <div>
                     <span className="font-medium">v{v.version}</span>{' '}
                     {v.id === row.booth.activeConfigId && (
-                      <span className="rounded bg-emerald-100 px-1.5 text-xs text-emerald-800">
+                      <span className="rounded-full bg-success-soft px-2 text-xs font-medium text-success">
                         aktif
                       </span>
                     )}

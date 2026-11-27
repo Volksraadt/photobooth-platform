@@ -27,18 +27,32 @@ const CONNECTIVITY_TEXT: Record<Connectivity, string> = {
   never: 'belum pernah terhubung',
 };
 
-function Stat(props: { label: string; value: string; hint?: string; href?: string; tone?: 'warn' }) {
+function Stat(props: {
+  label: string;
+  value: string;
+  hint?: string;
+  href?: string;
+  tone?: 'warn';
+}) {
   const body = (
     <CardContent className="space-y-1 pt-5 pb-5">
-      <p className="text-xs text-muted-foreground">{props.label}</p>
-      <p className={`text-2xl font-semibold ${props.tone === 'warn' ? 'text-amber-700' : ''}`}>
+      <p className="text-xs font-medium text-muted-foreground">{props.label}</p>
+      <p
+        className={`text-2xl font-semibold tabular-nums tracking-tight ${props.tone === 'warn' ? 'text-warning' : ''}`}
+      >
         {props.value}
       </p>
       {props.hint && <p className="text-xs text-muted-foreground">{props.hint}</p>}
     </CardContent>
   );
   return (
-    <Card className={props.href ? 'transition-colors hover:border-primary/40' : undefined}>
+    <Card
+      className={
+        props.href
+          ? 'transition-[border-color,box-shadow] hover:border-primary/40 hover:shadow-sm'
+          : undefined
+      }
+    >
       {props.href ? (
         <Link href={props.href} className="block">
           {body}
@@ -89,10 +103,10 @@ export function OrgOverview({ data }: { data: OverviewData }) {
       </div>
 
       {problems > 0 && (
-        <Card className="border-amber-200 bg-amber-50/60" data-testid="overview-attention">
+        <Card className="border-warning/30 bg-warning-soft" data-testid="overview-attention">
           <CardContent className="space-y-1.5 pt-4 pb-4 text-sm">
-            <p className="font-medium text-amber-900">Perlu dicek</p>
-            <ul className="space-y-1 text-amber-900/90">
+            <p className="font-medium text-warning">Perlu dicek</p>
+            <ul className="space-y-1 text-foreground/80">
               {attention.map((d) => (
                 <li key={d.id}>
                   <Link href="/devices" className="underline">

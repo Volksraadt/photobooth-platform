@@ -27,7 +27,7 @@ export function LoginForm() {
       </div>
       <FormMessage state={state} />
       <div className="flex gap-2">
-        <Button type="submit" name="intent" value="signin" className="flex-1" disabled={pending}>
+        <Button type="submit" name="intent" value="signin" className="flex-1" loading={pending}>
           Masuk
         </Button>
         <Button
