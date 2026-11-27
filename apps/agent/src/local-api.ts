@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { networkInterfaces } from 'node:os';
 import type { CameraPairingPayload } from '@pb/capture/protocol';
 import { CAMERA_PROTOCOL_VERSION } from '@pb/capture/protocol';
-import { NEUTRAL_FILTER_PARAMS, type BoothConfig } from '@pb/schema';
+import { DeliveryRequestSchema, NEUTRAL_FILTER_PARAMS, type BoothConfig } from '@pb/schema';
 import { composeSheet, composeStrip } from '@pb/compositor';
 import { Hono, type Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
@@ -248,6 +248,29 @@ export function createLocalApi(agent: Agent) {
       printError: result.printError,
       timings: result.timings,
     });
+  });
+
+  /**
+   * F9: queue "send the download link to this WhatsApp/e-mail". Waits in the outbox while
+   * offline; the platform sends it (the booth holds no messaging credentials).
+   */
+  app.post('/deliveries', async (c) => {
+    const raw: unknown = await c.req.json().catch(() => null);
+    const ref = z.object({ session: SessionInfoSchema }).safeParse(raw);
+    const req = DeliveryRequestSchema.safeParse(raw);
+    if (!ref.success || !req.success)
+      return c.json({ error: 'invalid_body', issues: (ref.error ?? req.error)?.issues }, 400);
+    const { session } = ref.data;
+    const { channel, to, requestedAt } = req.data;
+    agent.store.ensureSession(session);
+    const id = agent.store.enqueue('delivery', {
+      session: { id: session.id, code: session.code, startedAt: session.startedAt },
+      channel,
+      to,
+      requestedAt,
+    });
+    void agent.telemetry.flush();
+    return c.json({ id, queued: true as const });
   });
 
   /** The kiosk dropped an unpaid session (see store.abandonSession). */

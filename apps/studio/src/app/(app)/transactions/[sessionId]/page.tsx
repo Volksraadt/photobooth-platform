@@ -1,4 +1,4 @@
-import { getSessionDetail } from '@pb/db';
+import { getSessionDetail, listSessionDeliveries } from '@pb/db';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@pb/ui';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -23,6 +23,12 @@ const PAYMENT_STATUS: Record<string, string> = {
   failed: 'gagal',
   paid_late: 'lunas terlambat (refund manual)',
 };
+const DELIVERY_STATUS: Record<string, string> = {
+  queued: 'menunggu dikirim',
+  sending: 'sedang dikirim',
+  sent: 'terkirim',
+  failed: 'gagal',
+};
 
 /** One session: money, thumbnail of the printed strip, files, upload and print state. */
 export default async function SessionDetailPage({
@@ -34,6 +40,7 @@ export default async function SessionDetailPage({
   const { user, org } = await requireOrg();
   const d = await asUser(user, (tx) => getSessionDetail(tx, org.id, sessionId));
   if (!d) notFound();
+  const sent = await asUser(user, (tx) => listSessionDeliveries(tx, sessionId));
   const s = d.session;
   const tz = d.timezone;
   const counts = d.outputs.reduce<Record<string, number>>((acc, o) => {
@@ -150,6 +157,35 @@ export default async function SessionDetailPage({
                       )}
                       <span className="ml-2 text-xs text-muted-foreground">
                         {formatDateTime(new Date(r.answeredAt), tz)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+
+          {sent.length > 0 && (
+            <Card data-testid="session-deliveries">
+              <CardHeader>
+                <CardTitle className="text-base">Kirim hasil</CardTitle>
+                <CardDescription>
+                  Tautan unduhan yang diminta pembeli lewat WhatsApp atau e-mail. Nomor dan alamat
+                  lengkap tidak ditampilkan.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="divide-y rounded border text-sm">
+                  {sent.map((x) => (
+                    <li key={x.id} className="flex flex-wrap justify-between gap-2 p-2">
+                      <span>
+                        {x.channel === 'whatsapp' ? 'WhatsApp' : 'E-mail'}{' '}
+                        <span className="font-mono">{x.recipientHint}</span> ·{' '}
+                        <b>{DELIVERY_STATUS[x.status] ?? x.status}</b>
+                        {x.status === 'failed' && x.lastError ? ` (${x.lastError})` : ''}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDateTime(x.sentAt ?? x.requestedAt, tz)}
                       </span>
                     </li>
                   ))}

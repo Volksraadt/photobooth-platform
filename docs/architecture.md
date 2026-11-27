@@ -180,6 +180,7 @@ State: `cover → tutorial → framePick → payment → capture → review → 
 - Row Level Security Supabase per `org_id` untuk akses dari Studio; API memakai service role dengan filter `org_id` eksplisit.
 - PIN admin Kiosk di-hash, disinkron sebagai bagian config.
 - Link Drive bersifat "anyone with link"; short link memakai kode acak 8 karakter (cukup sulit ditebak). Opsi kedaluwarsa link per booth.
+- F9: token pengirim WhatsApp/e-mail milik platform hanya di env worker. Nomor/e-mail pembeli dienkripsi seperti kredensial (AAD per baris) dan dihapus setelah pesan final; Studio hanya melihat versi tersamar.
 
 ## 6. Deployment (usulan awal)
 - Studio: Vercel.

@@ -31,6 +31,7 @@ export const ELEMENT_LABEL: Record<ElementType, string> = {
   'print-copies': 'Jumlah cetak',
   'consent-checkbox': 'Persetujuan',
   'survey-question': 'Pertanyaan survei',
+  'contact-input': 'Kirim hasil',
 };
 
 const FONT = 'Inter, system-ui, sans-serif';
@@ -70,6 +71,7 @@ const SIZE: Record<ElementType, [number, number]> = {
   'print-copies': [400, 100],
   'consent-checkbox': [900, 90],
   'survey-question': [1000, 200],
+  'contact-input': [560, 520],
 };
 
 /**
@@ -228,6 +230,19 @@ export function createElement(
         optionTextStyle: defaultTextStyle(28),
         optionStyle: { fill: '#1e293b', borderRadius: 16 },
         selectedStyle: { fill: '#ec4899', borderRadius: 16 },
+      });
+    case 'contact-input':
+      return make<'contact-input'>({
+        name: 'Kirim ke WhatsApp',
+        channel: 'whatsapp',
+        placeholder: 'Nomor WhatsApp',
+        textStyle: defaultTextStyle(36, { color: '#0f172a', align: 'left' }),
+        fieldStyle: { fill: '#ffffff', borderRadius: 16 },
+        keyTextStyle: defaultTextStyle(32, { color: '#0f172a' }),
+        keyStyle: { fill: '#ffffff', borderRadius: 14 },
+        submitLabel: 'Kirim',
+        submitStyle: { fill: '#ec4899', borderRadius: 14 },
+        gap: 8,
       });
   }
   // Keep the union exhaustive.

@@ -247,6 +247,31 @@ export const SurveyQuestionElementSchema = BaseElementSchema.extend({
   selectedStyle: BoxStyleSchema,
 });
 
+// --- Send results (F9) ---
+
+export const DeliveryChannelSchema = z.enum(['whatsapp', 'email']);
+export type DeliveryChannel = z.infer<typeof DeliveryChannelSchema>;
+
+/**
+ * Result page: the buyer types a WhatsApp number (numeric keypad) or an e-mail address
+ * (on-screen keyboard) and the download link is sent there. Field, keys and send button are
+ * drawn inside the element's box.
+ */
+export const ContactInputElementSchema = BaseElementSchema.extend({
+  type: z.literal('contact-input'),
+  channel: DeliveryChannelSchema,
+  placeholder: z.string().max(120),
+  /** Field text (and status line). */
+  textStyle: TextStyleSchema,
+  fieldStyle: BoxStyleSchema,
+  keyTextStyle: TextStyleSchema,
+  keyStyle: BoxStyleSchema,
+  submitLabel: z.string().min(1).max(40),
+  submitStyle: BoxStyleSchema,
+  /** Space between keys (artboard px). */
+  gap: NonNegative,
+});
+
 export const ElementSchema = z.discriminatedUnion('type', [
   ImageElementSchema,
   TextElementSchema,
@@ -269,6 +294,7 @@ export const ElementSchema = z.discriminatedUnion('type', [
   PrintCopiesElementSchema,
   ConsentCheckboxElementSchema,
   SurveyQuestionElementSchema,
+  ContactInputElementSchema,
 ]);
 export type Element = z.infer<typeof ElementSchema>;
 export type ElementType = Element['type'];

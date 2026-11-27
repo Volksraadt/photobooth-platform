@@ -1,4 +1,13 @@
-import type { BoothConfig, ButtonActionKind, Frame, PageType } from '@pb/schema';
+import {
+  normalizeEmail,
+  normalizeWhatsapp,
+  type BoothConfig,
+  type ButtonActionKind,
+  type DeliveryChannel,
+  type ElementOf,
+  type Frame,
+  type PageType,
+} from '@pb/schema';
 import type { FlowResponse, FlowSession } from './types';
 
 export function enabledFrames(config: BoothConfig): Frame[] {
@@ -136,4 +145,42 @@ export function responsesForRenderer(responses: Record<string, FlowResponse>): {
       all.flatMap((r) => (r.kind === 'survey' ? [[r.elementId, r.optionIds]] : [])),
     ),
   };
+}
+
+// --- F9: contact-input ---
+
+export const CONTACT_MAX_LENGTH: Record<DeliveryChannel, number> = { whatsapp: 15, email: 254 };
+
+/** Visible contact-input of the Result page with this id. */
+export function contactElement(
+  config: BoothConfig,
+  page: PageType | null,
+  elementId: string,
+): ElementOf<'contact-input'> | undefined {
+  if (page !== 'result') return undefined;
+  const el = config.pages.result.elements.find((e) => e.id === elementId);
+  return el?.type === 'contact-input' && el.visible ? el : undefined;
+}
+
+/** Value after a key press, or null when the key is not allowed for the channel. */
+export function contactAfterKey(
+  channel: DeliveryChannel,
+  value: string,
+  key: string,
+): string | null {
+  const ok = channel === 'whatsapp' ? /^\d$/.test(key) : /^[a-z0-9@._+-]+$/i.test(key);
+  if (!ok) return null;
+  const next = value + (channel === 'email' ? key.toLowerCase() : key);
+  return next.length <= CONTACT_MAX_LENGTH[channel] ? next : null;
+}
+
+/** Normalised recipient, or null when the typed value is not a number / address. */
+export function normalizeContact(channel: DeliveryChannel, value: string): string | null {
+  return channel === 'whatsapp' ? normalizeWhatsapp(value) : normalizeEmail(value);
+}
+
+/** WhatsApp digits grouped for reading on the field: 0812 3456 7890. */
+export function formatContact(channel: DeliveryChannel, value: string): string {
+  if (channel === 'email') return value;
+  return value.replace(/(\d{4})(?=\d)/g, '$1 ');
 }

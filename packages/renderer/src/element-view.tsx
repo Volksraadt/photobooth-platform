@@ -29,6 +29,7 @@ import {
   TextElementView,
   VideoElementView,
 } from './elements/static-elements';
+import { ContactInputElementView } from './elements/contact-input';
 import {
   ConsentCheckboxElementView,
   SurveyQuestionElementView,
@@ -79,6 +80,8 @@ function ElementBody({ element }: { element: Element }) {
       return <ConsentCheckboxElementView el={element} />;
     case 'survey-question':
       return <SurveyQuestionElementView el={element} />;
+    case 'contact-input':
+      return <ContactInputElementView el={element} />;
   }
 }
 

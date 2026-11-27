@@ -359,6 +359,13 @@ export class AgentClient implements AgentLink {
     }>('POST', '/vouchers/redeem', body);
   approveCash = (body: { pin: string; session: AgentSessionRef; amount: number }) =>
     this.json<{ id: string; offline: boolean }>('POST', '/cash-approvals', body);
+  /** F9: queue "send the link to this WhatsApp/e-mail" (sent by the platform once online). */
+  requestDelivery = (body: {
+    session: AgentSessionRef;
+    channel: 'whatsapp' | 'email';
+    to: string;
+    requestedAt: string;
+  }) => this.json<{ id: string; queued: true }>('POST', '/deliveries', body);
   syncVouchers = () => this.json<{ ok: true }>('POST', '/vouchers/sync', {});
   network = () => this.request<{ online: boolean | null }>('/network');
 

@@ -49,6 +49,7 @@ export function buildRuntime(snapshot: FlowSnapshot, camera: CameraRuntime): Ren
     progress: context.progress,
     downloadUrl: session?.downloadUrl ?? null,
     ...responsesForRenderer(context.responses),
+    contacts: context.contacts,
     canAction: (action) => snapshot.can(uiActionToEvent(action)),
   };
 }

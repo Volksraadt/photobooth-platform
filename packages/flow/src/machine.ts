@@ -1,5 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
-import { generateSessionCode, type PageType } from '@pb/schema';
+import { generateSessionCode, MAX_DELIVERIES_PER_SESSION, type PageType } from '@pb/schema';
 import {
   and,
   assign,
@@ -14,6 +14,9 @@ import {
 } from 'xstate';
 import {
   applyResponse,
+  contactAfterKey,
+  contactElement,
+  normalizeContact,
   defaultFilterId,
   findFrame,
   idleTimeoutMs,
@@ -25,6 +28,8 @@ import {
 import {
   DEFAULT_FLOW_TIMINGS,
   type CaptureShotInput,
+  type ContactState,
+  type DeliverResultInput,
   type CreatePaymentInput,
   type CreatePaymentOutput,
   type FlowContext,
@@ -80,6 +85,15 @@ const responseInput = (event: Extract<FlowEvent, { type: 'CONSENT.TOGGLE' | 'SUR
   event.type === 'SURVEY.SELECT'
     ? { elementId: event.elementId, optionId: event.optionId }
     : { elementId: event.elementId };
+
+const withContactStatus = (
+  ctx: FlowContext,
+  elementId: string,
+  status: ContactState['status'],
+): Record<string, ContactState> => ({
+  ...ctx.contacts,
+  [elementId]: { value: ctx.contacts[elementId]?.value ?? '', status },
+});
 
 const updateSession = (ctx: FlowContext, patch: Partial<FlowSession>): FlowSession | null =>
   ctx.session ? { ...ctx.session, ...patch } : null;
@@ -166,6 +180,7 @@ export const flowMachine = setup({
     redeemVoucher: fromPromise<RedeemVoucherOutput, RedeemVoucherInput>(
       notProvided('redeemVoucher'),
     ),
+    deliverResult: fromPromise<void, DeliverResultInput>(notProvided('deliverResult')),
     processSession: fromCallback<FlowEvent, ProcessSessionInput>(({ sendBack }) => {
       sendBack({ type: 'PROCESSING.FAILED', message: 'processSession is not provided' });
     }),
@@ -252,6 +267,23 @@ export const flowMachine = setup({
       (context.session?.extraPrints ?? 0) < context.config.pricing.maxExtraPrints,
     canRemovePrint: ({ context }) => (context.session?.extraPrints ?? 0) > 0,
     unpaid: ({ context }) => !context.session?.paid,
+    contactOnPage: ({ context, event }) =>
+      (event.type === 'CONTACT.KEY' ||
+        event.type === 'CONTACT.BACKSPACE' ||
+        event.type === 'CONTACT.SUBMIT') &&
+      !!contactElement(context.config, context.page, event.elementId),
+    contactSendable: ({ context, event }) => {
+      if (event.type !== 'CONTACT.SUBMIT' || !context.session) return false;
+      const el = contactElement(context.config, context.page, event.elementId);
+      const value = context.contacts[event.elementId]?.value ?? '';
+      return (
+        !!el &&
+        context.deliveriesRequested < MAX_DELIVERIES_PER_SESSION &&
+        normalizeContact(el.channel, value) !== null
+      );
+    },
+    deliveryLimitReached: ({ context }) =>
+      context.deliveriesRequested >= MAX_DELIVERIES_PER_SESSION,
     /** Required consents / questions of the current page are answered (F8). */
     responsesComplete: ({ context }) =>
       pageResponsesComplete(context.config, context.page, context.responses),
@@ -275,6 +307,69 @@ export const flowMachine = setup({
       const ms = idleTimeoutMs(context.config, context.page);
       if (ms !== null) enqueue.raise({ type: 'IDLE.TIMEOUT' }, { id: 'idle', delay: ms });
     }),
+    restartResultTimer: enqueueActions(({ context, enqueue }) => {
+      enqueue.cancel('resultReturn');
+      enqueue.raise(
+        { type: 'RESULT.TIMEOUT' },
+        { id: 'resultReturn', delay: context.config.flow.resultAutoReturnSec * 1000 },
+      );
+    }),
+    stopResultTimer: enqueueActions(({ enqueue }) => enqueue.cancel('resultReturn')),
+    contactKey: assign(({ context, event }) => {
+      if (event.type !== 'CONTACT.KEY') return {};
+      const el = contactElement(context.config, context.page, event.elementId);
+      const cur = context.contacts[event.elementId] ?? { value: '', status: 'idle' as const };
+      if (!el || cur.status === 'sending') return {};
+      const value = contactAfterKey(el.channel, cur.value, event.key);
+      if (value === null) return {};
+      return { contacts: { ...context.contacts, [el.id]: { value, status: 'idle' as const } } };
+    }),
+    contactBackspace: assign(({ context, event }) => {
+      if (event.type !== 'CONTACT.BACKSPACE') return {};
+      const cur = context.contacts[event.elementId];
+      if (!cur || cur.status === 'sending') return {};
+      return {
+        contacts: {
+          ...context.contacts,
+          [event.elementId]: { value: cur.value.slice(0, -1), status: 'idle' as const },
+        },
+      };
+    }),
+    markContactSending: assign(({ context, event }) =>
+      event.type === 'CONTACT.SUBMIT'
+        ? {
+            contactSending: event.elementId,
+            contacts: withContactStatus(context, event.elementId, 'sending'),
+          }
+        : {},
+    ),
+    markContactInvalid: assign(({ context, event }) =>
+      event.type === 'CONTACT.SUBMIT'
+        ? { contacts: withContactStatus(context, event.elementId, 'invalid') }
+        : {},
+    ),
+    markContactLimit: assign(({ context, event }) =>
+      event.type === 'CONTACT.SUBMIT'
+        ? { contacts: withContactStatus(context, event.elementId, 'limit') }
+        : {},
+    ),
+    markContactSent: assign(({ context }) =>
+      context.contactSending
+        ? {
+            contacts: withContactStatus(context, context.contactSending, 'sent'),
+            contactSending: null,
+            deliveriesRequested: context.deliveriesRequested + 1,
+          }
+        : {},
+    ),
+    markContactError: assign(({ context }) =>
+      context.contactSending
+        ? {
+            contacts: withContactStatus(context, context.contactSending, 'error'),
+            contactSending: null,
+          }
+        : {},
+    ),
     recordResponse: assign(({ context, event }) => {
       if (event.type !== 'CONSENT.TOGGLE' && event.type !== 'SURVEY.SELECT') return {};
       const next = applyResponse(
@@ -295,6 +390,9 @@ export const flowMachine = setup({
       enqueue.assign({
         session: null,
         responses: {},
+        contacts: {},
+        contactSending: null,
+        deliveriesRequested: 0,
         activeSlot: null,
         retaking: false,
         countdown: null,
@@ -418,6 +516,9 @@ export const flowMachine = setup({
     shotCounter: 0,
     qrisUnavailable: false,
     responses: {},
+    contacts: {},
+    contactSending: null,
+    deliveriesRequested: 0,
   }),
   initial: 'cover',
   on: {
@@ -918,9 +1019,62 @@ export const flowMachine = setup({
     },
 
     result: {
-      entry: [assign({ page: 'result' as PageType | null }), 'restartIdle'],
-      after: { resultReturn: 'cover' },
-      on: { FINISH: 'cover', START: 'cover', NEXT: 'cover', CONFIRM: 'cover' },
+      entry: [assign({ page: 'result' as PageType | null }), 'restartIdle', 'restartResultTimer'],
+      exit: 'stopResultTimer',
+      initial: 'ready',
+      states: {
+        ready: {
+          on: {
+            'CONTACT.SUBMIT': [
+              {
+                guard: 'contactSendable',
+                target: 'sending',
+                actions: 'markContactSending',
+              },
+              {
+                guard: and(['contactOnPage', 'deliveryLimitReached']),
+                actions: 'markContactLimit',
+              },
+              { guard: 'contactOnPage', actions: 'markContactInvalid' },
+            ],
+          },
+        },
+        sending: {
+          invoke: {
+            src: 'deliverResult',
+            input: ({ context }) => {
+              const session = context.session!;
+              const id = context.contactSending!;
+              const el = contactElement(context.config, context.page, id)!;
+              return {
+                sessionId: session.id,
+                sessionCode: session.code,
+                startedAt: session.startedAt,
+                boothId: context.config.boothId,
+                configVersion: context.config.configVersion,
+                channel: el.channel,
+                to: normalizeContact(el.channel, context.contacts[id]?.value ?? '')!,
+                requestedAt: new Date().toISOString(),
+              };
+            },
+            onDone: { target: 'ready', actions: 'markContactSent' },
+            onError: { target: 'ready', actions: 'markContactError' },
+          },
+        },
+      },
+      on: {
+        FINISH: 'cover',
+        START: 'cover',
+        NEXT: 'cover',
+        CONFIRM: 'cover',
+        'RESULT.TIMEOUT': 'cover',
+        // Typing keeps the page open: the auto-return restarts on every key.
+        'CONTACT.KEY': { guard: 'contactOnPage', actions: ['contactKey', 'restartResultTimer'] },
+        'CONTACT.BACKSPACE': {
+          guard: 'contactOnPage',
+          actions: ['contactBackspace', 'restartResultTimer'],
+        },
+      },
     },
 
     error: {

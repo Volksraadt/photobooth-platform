@@ -158,6 +158,7 @@ type ButtonAction =
 | `print-copies` | review | stepper jumlah cetak: `textStyle`, `buttonStyle?` |
 | `consent-checkbox` | cover, framePick, review | `label` (pernyataan), `required`, `textStyle`, `boxSize`, `boxStyle`, `checkedStyle`, `checkColor` — schema v3, lihat A.10 |
 | `survey-question` | cover, framePick, review | `question`, `options[]` (`id`, `label`, 1–12), `multiple`, `required`, `layout: 'row' \| 'grid' \| 'column'`, `columns`, `gap`, `questionStyle?`, `optionTextStyle`, `optionStyle`, `selectedStyle` — schema v3, lihat A.10 |
+| `contact-input` | result (1 per kanal) | `channel: 'whatsapp' \| 'email'`, `placeholder`, `textStyle`, `fieldStyle`, `keyTextStyle`, `keyStyle`, `submitLabel`, `submitStyle`, `gap` — schema v4, lihat A.11 |
 
 > Catatan F0: properti pilihan tampilan bernama `variant` (bukan `style`) karena `style` sudah dipakai `BaseElement` untuk `BoxStyle`. Detail lengkap ada di bagian A.6.
 
@@ -469,3 +470,13 @@ File `agent.sqlite` di folder data agent (Windows `%APPDATA%\photobooth-agent`, 
 - Ketuk di mana saja pada `consent-checkbox` = centang/batal. `survey-question` `multiple: false` berlaku seperti radio (ketuk pilihan yang sama tidak membatalkan); `multiple: true` = centang/batal per pilihan. Id pilihan unik per pertanyaan (`survey-question.option-ids`). Tidak ada jawaban teks bebas (Kiosk tanpa keyboard layar).
 - Jawaban (`SessionResponse` di `packages/schema/src/session-response.ts`, sama dengan `FlowResponse` di `@pb/flow`): `{ kind: 'consent', elementId, page, label, answeredAt }` atau `{ kind: 'survey', elementId, page, question, optionIds, optionLabels, answeredAt }`. Teks disalin dari desain saat menjawab, jadi rekap tetap terbaca walau owner mengubah desain. Persetujuan yang tidak dicentang dan pertanyaan kosong tidak dicatat. Jawaban disimpan di konteks flow (Cover terjadi sebelum sesi dibuat), dihapus setiap kembali ke Cover, dan ikut ke `processSession` → agent (`/process`, disimpan di `data` sesi lokal) → outbox `session` → API → `sessions.responses` (migrasi `0010_f8_session_responses.sql`, default `[]`). Kiriman ulang tanpa `responses` (agent lama) tidak menghapus jawaban yang sudah tersimpan.
 - Studio: detail sesi menampilkan kartu "Persetujuan dan survei"; ekspor CSV/Excel transaksi menambah kolom **Persetujuan** dan **Survei** (satu baris per item di dalam sel).
+
+### A.11 Schema v4: kirim hasil lewat WhatsApp / e-mail (F9, 2026-11-27)
+- `CURRENT_SCHEMA_VERSION` 3 → **4**. Elemen baru `contact-input` `{ channel: 'whatsapp' | 'email', placeholder, textStyle, fieldStyle, keyTextStyle, keyStyle, submitLabel, submitStyle, gap }`, hanya di Hasil, maksimal satu per kanal (`result.contact-input.<channel>.count`). Migrasi 3 → 4 tidak mengubah isi config.
+- Kiosk: kolom + keypad di dalam elemen (WhatsApp 3×4 angka; e-mail huruf/angka, `@ . _ -`, tombol `@gmail.com` dan `.com`). Kirim = `CONTACT.SUBMIT`; penerima dinormalisasi (`normalizeWhatsapp`: `0…`/`8…` → `62…`, nomor Indonesia `628` + 8–11 digit; `normalizeEmail`: huruf kecil). Maksimal `MAX_DELIVERIES_PER_SESSION` = 3 kiriman per sesi untuk semua kanal. Mengetik memperpanjang timer kembali ke Cover.
+- `DeliveryRequest` (`packages/schema/src/session-response.ts`): `{ channel, to, requestedAt }`. Jalur: Kiosk → agent `POST /deliveries` (`{ session, channel, to, requestedAt }`) → outbox `delivery` → API `/device/events` `deliveries[]` `{ id, session, channel, to, requestedAt }` (diterapkan setelah `sessions`). Penerima tidak valid, batas terlampaui, atau API tanpa `SECRET_MASTER_KEY` = `sync_conflict` yang di-acknowledge.
+
+### B.14 Tabel `deliveries` (F9, migrasi `0011_f9_deliveries.sql`)
+- `id` (= id outbox agent), `org_id`, `session_id`, `channel` (`delivery_channel`), `recipient_encrypted` (SecretBox, AAD `delivery:<id>`; dikosongkan setelah `sent`/`failed`), `recipient_hint` (`+62812•••890`, `bu•••@gmail.com`), `status` (`queued|sending|sent|failed`), `attempts`, `last_error`, `next_attempt_at`, `provider_message_id`, `requested_at`, `sent_at`, timestamps.
+- RLS: anggota org boleh baca (`deliveries_member_read`); tulis hanya API/worker. Studio membaca kolom selain `recipient_encrypted`.
+- Worker: `claimNextDelivery` (`FOR UPDATE SKIP LOCKED`, baris `sending` > 5 menit diambil lagi), jeda 30 dtk × 2ⁿ, maksimal 5 percobaan.

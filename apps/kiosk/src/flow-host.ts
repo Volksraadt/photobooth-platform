@@ -6,6 +6,7 @@ import {
   sessionTotal,
   type CaptureShotInput,
   type CreatePaymentInput,
+  type DeliverResultInput,
   type CreatePaymentOutput,
   type FlowEvent,
   type RedeemVoucherInput,
@@ -240,6 +241,25 @@ export function createKioskMachine(deps: KioskFlowDeps) {
       redeemVoucher: fromPromise<RedeemVoucherOutput, RedeemVoucherInput>(async ({ input }) =>
         agent ? redeemWithAgent(agent, input) : { ok: false, reason: 'invalid' },
       ),
+      // F9. Browser-only dev has no outbox: the request is only logged.
+      deliverResult: fromPromise<void, DeliverResultInput>(async ({ input }) => {
+        if (!agent) {
+          console.info('[kiosk] delivery (no agent, not sent)', input.channel, input.sessionCode);
+          return;
+        }
+        await agent.requestDelivery({
+          session: {
+            id: input.sessionId,
+            code: input.sessionCode,
+            startedAt: input.startedAt,
+            boothId: input.boothId,
+            configVersion: input.configVersion,
+          },
+          channel: input.channel,
+          to: input.to,
+          requestedAt: input.requestedAt,
+        });
+      }),
       processSession: fromCallback<FlowEvent, ProcessSessionInput>(({ input, sendBack }) => {
         let cancelled = false;
         const send = (e: FlowEvent) => {

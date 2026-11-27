@@ -12,3 +12,4 @@ export * from './output-repo';
 export * from './billing-repo';
 export * from './report-repo';
 export * from './library-repo';
+export * from './delivery-repo';

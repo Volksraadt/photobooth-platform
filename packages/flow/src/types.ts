@@ -1,4 +1,4 @@
-import type { BoothConfig, PageType, PaymentMethod } from '@pb/schema';
+import type { BoothConfig, DeliveryChannel, PageType, PaymentMethod } from '@pb/schema';
 
 /** A stored still, referenced by id. Binary data lives outside the machine (kiosk photo store). */
 export type ShotPhoto = {
@@ -156,6 +156,39 @@ export type FlowContext = {
    * before the session starts; cleared on every return to Cover.
    */
   responses: Record<string, FlowResponse>;
+  /** F9: what the buyer typed into each contact-input of the Result page. */
+  contacts: Record<string, ContactState>;
+  /** contact-input whose send request is in flight. */
+  contactSending: string | null;
+  /** Send requests accepted for this session (see MAX_DELIVERIES_PER_SESSION). */
+  deliveriesRequested: number;
+};
+
+export type ContactStatus =
+  | 'idle'
+  /** Not a WhatsApp number / e-mail address. */
+  | 'invalid'
+  | 'sending'
+  /** Queued on the booth; sent by the platform as soon as it is online. */
+  | 'sent'
+  | 'error'
+  /** MAX_DELIVERIES_PER_SESSION reached. */
+  | 'limit';
+
+export type ContactState = { value: string; status: ContactStatus };
+
+export type DeliverResultInput = {
+  sessionId: string;
+  sessionCode: string;
+  /** ISO 8601, UTC. */
+  startedAt: string;
+  boothId: string;
+  configVersion: number;
+  channel: DeliveryChannel;
+  /** Normalised (normalizeWhatsapp / normalizeEmail). */
+  to: string;
+  /** ISO 8601, UTC. */
+  requestedAt: string;
 };
 
 export type FlowInput = {
@@ -181,6 +214,12 @@ export type FlowEvent =
   | { type: 'CONSENT.TOGGLE'; elementId: string }
   /** Tap an option of a survey-question on the current page (single: replaces; multiple: toggles). */
   | { type: 'SURVEY.SELECT'; elementId: string; optionId: string }
+  /** contact-input on the Result page (F9). `key` = one character or a chunk such as ".com". */
+  | { type: 'CONTACT.KEY'; elementId: string; key: string }
+  | { type: 'CONTACT.BACKSPACE'; elementId: string }
+  | { type: 'CONTACT.SUBMIT'; elementId: string }
+  /** Result page auto-return (restarted by typing). */
+  | { type: 'RESULT.TIMEOUT' }
   /** QRIS settled (paymentId), or cash approved by the operator (method: 'cash'). */
   | { type: 'PAYMENT.PAID'; paymentId?: string; method?: PaymentMethod }
   | { type: 'NETWORK.ONLINE' }

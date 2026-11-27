@@ -133,6 +133,7 @@ export class Telemetry {
         voucherUses: [],
         cashApprovals: [],
         sessions: [],
+        deliveries: [],
       };
       const cancels: string[] = [];
       for (const row of rows) {
@@ -158,6 +159,9 @@ export class Telemetry {
             break;
           case 'session':
             batch.sessions.push({ id: row.id, session: payload });
+            break;
+          case 'delivery':
+            batch.deliveries.push({ id: row.id, ...payload });
             break;
           case 'payment_cancel':
             cancels.push(row.id);

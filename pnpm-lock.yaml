@@ -519,6 +519,9 @@ importers:
       '@pb/drive':
         specifier: workspace:*
         version: link:../../packages/drive
+      '@pb/messaging':
+        specifier: workspace:*
+        version: link:../../packages/messaging
       '@pb/schema':
         specifier: workspace:*
         version: link:../../packages/schema
@@ -623,6 +626,8 @@ importers:
       xstate:
         specifier: ^5.33.4
         version: 5.33.4
+
+  packages/messaging: {}
 
   packages/payments:
     dependencies:
