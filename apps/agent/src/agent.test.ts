@@ -469,6 +469,33 @@ describe('telemetry', () => {
     ).toHaveLength(events.length);
   });
 
+  it('F9: queues a link delivery in the outbox and hands it to the API', async () => {
+    const post = (to: string) =>
+      fetch(`${local}/deliveries`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          session: { ...session, boothId, configVersion: 1 },
+          channel: 'whatsapp',
+          to,
+          requestedAt: new Date().toISOString(),
+        }),
+      });
+    expect((await post('12')).status).toBe(400);
+    const ok = await json<{ id: string; queued: boolean }>(post('0812 3456 7890'));
+    expect(ok.queued).toBe(true);
+    await until(
+      () => agent.store.outboxCount(),
+      (n) => n === 0,
+    );
+    // This API has no SECRET_MASTER_KEY: the request is acknowledged as a conflict, not retried.
+    const [conflict] = await db.select().from(deviceEvents).where(eq(deviceEvents.id, ok.id));
+    expect(conflict).toMatchObject({
+      kind: 'sync_conflict',
+      data: { code: 'delivery_unavailable' },
+    });
+  });
+
   it('queues while offline and keeps the last config for an offline restart', async () => {
     await agent.stop();
     agent = new Agent(agentOptions({ apiBase: 'http://127.0.0.1:9' }));

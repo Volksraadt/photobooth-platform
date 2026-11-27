@@ -31,7 +31,10 @@ export class PaymentRepoError extends Error {
       | 'already_paid'
       | 'amount_mismatch'
       | 'unknown_config'
-      | 'not_found',
+      | 'not_found'
+      | 'invalid_recipient'
+      | 'delivery_limit'
+      | 'delivery_unavailable',
     message: string,
   ) {
     super(message);

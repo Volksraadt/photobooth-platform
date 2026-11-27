@@ -3,10 +3,13 @@ import { resolve } from 'node:path';
 import { secretBoxFromEnv, type SecretBox } from '@pb/crypto';
 import { getDb, refreshDailyBoothStats, runBillingLifecycle, SESSION_QUEUE } from '@pb/db';
 import { AccessTokenCache, GoogleOAuth, googleConfigFromEnv } from '@pb/drive';
+import { messagingFromEnv } from '@pb/messaging';
 import { storageFromEnv } from '@pb/storage';
 import { Worker } from 'bullmq';
+import { drainDeliveries } from './deliveries';
 import { resolveFfmpeg } from './ffmpeg';
 import { JobRunner } from './runner';
+import type { WorkerDeps } from './types';
 
 const rootEnv = resolve(import.meta.dirname, '../../../.env');
 if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
@@ -23,22 +26,23 @@ function optionalSecretBox(): SecretBox | null {
 const google = googleConfigFromEnv();
 const secretBox = optionalSecretBox();
 const storage = storageFromEnv();
-const runner = new JobRunner(
-  {
-    db: getDb(),
-    storage,
-    secretBox,
-    google: google ? new GoogleOAuth(google) : null,
-    driveTokens: new AccessTokenCache(),
-    ffmpegPath: resolveFfmpeg(),
-    log: (m) => console.log(m),
-  },
-  Number(process.env.PB_WORKER_CONCURRENCY ?? 2),
-);
+const messaging = messagingFromEnv();
+const workerDeps: WorkerDeps = {
+  db: getDb(),
+  storage,
+  secretBox,
+  google: google ? new GoogleOAuth(google) : null,
+  driveTokens: new AccessTokenCache(),
+  ffmpegPath: resolveFfmpeg(),
+  messaging,
+  shortLinkBase: process.env.PB_SHORT_LINK_BASE ?? process.env.PB_PUBLIC_API_URL ?? null,
+  log: (m: string) => console.log(m),
+};
+const runner = new JobRunner(workerDeps, Number(process.env.PB_WORKER_CONCURRENCY ?? 2));
 
 const redisUrl = process.env.REDIS_URL;
 console.log(
-  `[worker] storage: ${storage.kind}, drive: ${google ? 'configured' : 'NOT configured (GOOGLE_CLIENT_ID/SECRET)'}, queue: ${redisUrl ? 'bullmq + db polling' : 'db polling'}`,
+  `[worker] storage: ${storage.kind}, drive: ${google ? 'configured' : 'NOT configured (GOOGLE_CLIENT_ID/SECRET)'}, queue: ${redisUrl ? 'bullmq + db polling' : 'db polling'}, messaging: ${messaging.channels.join('+') || 'NOT configured'}`,
 );
 
 // The job table is the queue of record: polling always runs (it also picks up retries whose
@@ -50,6 +54,7 @@ async function poll() {
   polling = true;
   try {
     await runner.drain();
+    await drainDeliveries(workerDeps);
   } catch (err) {
     console.error('[worker] poll failed', err);
   } finally {
@@ -65,6 +70,8 @@ if (redisUrl) {
     SESSION_QUEUE,
     async (job: { data: { sessionId?: string } }) => {
       await runner.drain(job.data.sessionId);
+      // The API wakes the session's queue after a new delivery too (F9).
+      await drainDeliveries(workerDeps);
     },
     { connection: { url: redisUrl, maxRetriesPerRequest: null }, concurrency: 4 },
   );

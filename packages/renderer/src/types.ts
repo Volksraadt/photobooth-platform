@@ -16,7 +16,13 @@ export type RendererAction =
   | { kind: 'voucherSubmit' }
   // consent-checkbox / survey-question (F8)
   | { kind: 'toggleConsent'; elementId: string }
-  | { kind: 'selectOption'; elementId: string; optionId: string };
+  | { kind: 'selectOption'; elementId: string; optionId: string }
+  // contact-input (F9)
+  | { kind: 'contactKey'; elementId: string; key: string }
+  | { kind: 'contactBackspace'; elementId: string }
+  | { kind: 'contactSubmit'; elementId: string };
+
+export type ContactRuntimeStatus = 'idle' | 'invalid' | 'sending' | 'sent' | 'error' | 'limit';
 
 export type VoucherRuntimeStatus =
   | 'idle'
@@ -95,6 +101,10 @@ export type RenderRuntime = {
   checkedConsents?: readonly string[];
   /** Picked option ids per survey-question element id. */
   surveyAnswers?: Readonly<Record<string, readonly string[]>>;
+
+  // Send results (F9)
+  /** What was typed into each contact-input, by element id. */
+  contacts?: Readonly<Record<string, { value: string; status: ContactRuntimeStatus }>>;
 
   /** Disabled actions render dimmed and ignore taps. Defaults to all enabled. */
   canAction?: (action: RendererAction) => boolean;

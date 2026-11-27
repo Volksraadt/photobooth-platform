@@ -14,6 +14,7 @@ import {
   cashApprovals,
   createBoothFromTemplate,
   createOrg,
+  deliveries,
   deviceEvents,
   devices,
   getBooth,
@@ -569,6 +570,39 @@ describe('vouchers + cash + session sync', () => {
       body: record([{ kind: 'survey', elementId: 'q1', page: 'payment-x' }]),
     });
     expect(bad.status).toBe(400);
+  });
+  it('queues a delivery from the outbox; a bad number is acknowledged, not retried (F9)', async () => {
+    const s = newSession();
+    const good = createId();
+    const bad = createId();
+    const r = await call('/device/events', {
+      body: {
+        events: [],
+        printJobs: [],
+        deliveries: [
+          {
+            id: good,
+            session: s,
+            channel: 'whatsapp',
+            to: '081234567890',
+            requestedAt: new Date().toISOString(),
+          },
+          {
+            id: bad,
+            session: s,
+            channel: 'whatsapp',
+            to: '12',
+            requestedAt: new Date().toISOString(),
+          },
+        ],
+      },
+    });
+    expect(r.status).toBe(200);
+    expect(r.body.accepted).toEqual(expect.arrayContaining([good, bad]));
+    const rows = await db.select().from(deliveries).where(eq(deliveries.sessionId, s.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ id: good, recipientHint: '+62812•••890', status: 'queued' });
+    expect(rows[0]!.recipientEncrypted).not.toContain('62812');
   });
 });
 

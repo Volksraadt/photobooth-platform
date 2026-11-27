@@ -191,7 +191,13 @@ export type LocalFileRow = {
 };
 
 export type OutboxKind =
-  'device_event' | 'print_job' | 'voucher_use' | 'cash_approval' | 'session' | 'payment_cancel';
+  | 'device_event'
+  | 'print_job'
+  | 'voucher_use'
+  | 'cash_approval'
+  | 'session'
+  | 'payment_cancel'
+  | 'delivery';
 
 export type OutboxRow = {
   id: string;

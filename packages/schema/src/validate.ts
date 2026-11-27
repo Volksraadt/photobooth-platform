@@ -37,6 +37,8 @@ export const ELEMENT_ALLOWED_PAGES: Partial<Record<ElementType, readonly PageTyp
   // F8: answered before the forward button; the answers travel with the session to processing.
   'consent-checkbox': ['cover', 'framePick', 'review'],
   'survey-question': ['cover', 'framePick', 'review'],
+  // F9: the link is sent once the session is processed.
+  'contact-input': ['result'],
 };
 
 const FRAME_DYNAMIC_TYPES: readonly ElementType[] = ['text', 'image', 'shape', 'download-qr'];
@@ -501,9 +503,23 @@ function checkSemantics(config: BoothConfig): ValidationIssue[] {
         if (enabledFilters.length > 1)
           requireExactlyOne('filter-picker', ' karena ada lebih dari satu filter aktif');
         break;
-      case 'result':
+      case 'result': {
         requireExactlyOne('download-qr');
+        for (const channel of ['whatsapp', 'email'] as const) {
+          const n = page.elements.filter(
+            (e) => e.type === 'contact-input' && e.channel === channel,
+          ).length;
+          if (n > 1) {
+            const name = channel === 'whatsapp' ? 'WhatsApp' : 'e-mail';
+            add(
+              `result.contact-input.${channel}.count`,
+              `${base}.elements`,
+              `Halaman ${label} hanya boleh punya satu kolom kirim ${name} (ditemukan ${n}).`,
+            );
+          }
+        }
         break;
+      }
     }
 
     const exits = EXIT_ACTIONS[type];

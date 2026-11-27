@@ -396,7 +396,7 @@ describe('migrate v1 → v2: voucher field and keypad become separate elements',
     const r = migrateBoothConfig(v1({ width: 700, height: 280 }));
     expect(r.success).toBe(true);
     if (!r.success) return;
-    expect(r.config.schemaVersion).toBe(3);
+    expect(r.config.schemaVersion).toBe(4);
     const field = r.config.pages.payment.elements.find((e) => e.type === 'voucher-input')!;
     const keypad = r.config.pages.payment.elements.find((e) => e.type === 'voucher-keypad')!;
     // v1: fieldHeight = min(280, 40 × 2.4) = 96; side rows (280 − 24) / 4 = 64;
@@ -416,7 +416,7 @@ describe('migrate v1 → v2: voucher field and keypad become separate elements',
 describe('readable locations in shape errors', () => {
   it('names the section, page and element of a zod issue', () => {
     const old = { ...fresh(), schemaVersion: 1 };
-    expect(issuesOf(old)[0]!.message).toBe('Versi skema desain: nilai tidak valid (seharusnya 3)');
+    expect(issuesOf(old)[0]!.message).toBe('Versi skema desain: nilai tidak valid (seharusnya 4)');
 
     const c = JSON.parse(JSON.stringify(fresh())) as BoothConfig;
     const field = c.pages.payment.elements.find((e) => e.type === 'voucher-input')!;
@@ -505,6 +505,60 @@ describe('F8: consent-checkbox + survey-question', () => {
       expect.objectContaining({
         code: 'element.wrong-page',
         path: expect.stringMatching(/^pages\.payment\./),
+      }),
+    );
+  });
+});
+
+describe('F9: contact-input', () => {
+  const text = {
+    fontFamily: 'Inter',
+    fontSize: 32,
+    fontWeight: 400,
+    color: '#111',
+    align: 'left' as const,
+    lineHeight: 1.2,
+    letterSpacing: 0,
+  };
+  const contact = (id: string, channel: 'whatsapp' | 'email') => ({
+    id,
+    name: 'Kirim hasil',
+    type: 'contact-input' as const,
+    x: 0,
+    y: 0,
+    width: 560,
+    height: 520,
+    rotation: 0,
+    opacity: 1,
+    visible: true,
+    locked: false,
+    channel,
+    placeholder: channel === 'whatsapp' ? 'Nomor WhatsApp' : 'Alamat e-mail',
+    textStyle: text,
+    fieldStyle: { fill: '#fff' },
+    keyTextStyle: text,
+    keyStyle: { fill: '#fff' },
+    submitLabel: 'Kirim',
+    submitStyle: { fill: '#ec4899' },
+    gap: 8,
+  });
+
+  it('accepts one per channel on the Result page', () => {
+    const c = fresh();
+    c.pages.result.elements.push(contact('wa', 'whatsapp'), contact('em', 'email'));
+    expect(issuesOf(c)).toEqual([]);
+  });
+
+  it('refuses it elsewhere and refuses two of one channel', () => {
+    const c = fresh();
+    c.pages.cover.elements.push(contact('wa0', 'whatsapp'));
+    c.pages.result.elements.push(contact('wa1', 'whatsapp'), contact('wa2', 'whatsapp'));
+    const issues = issuesOf(c);
+    expect(issues.map((i) => i.code)).toContain('result.contact-input.whatsapp.count');
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        code: 'element.wrong-page',
+        path: expect.stringMatching(/^pages\.cover\./),
       }),
     );
   });

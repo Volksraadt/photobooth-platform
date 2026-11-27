@@ -1,5 +1,5 @@
 import { sha256Hex } from '@pb/crypto';
-import { SessionResponsesSchema } from '@pb/schema';
+import { DeliveryChannelSchema, SessionResponsesSchema } from '@pb/schema';
 import {
   activeConfigForDevice,
   createPairingCode,
@@ -7,6 +7,7 @@ import {
   PairingBusyError,
   pairingStatus,
   PaymentRepoError,
+  queueDelivery,
   recordCashApproval,
   recordDeviceOutbox,
   recordHeartbeat,
@@ -145,6 +146,22 @@ const OutboxBody = z.object({
     )
     .max(200)
     .default([]),
+  /**
+   * F9: "send my link to …". `to` is checked by the repo, not here: one bad entry must not get
+   * the whole batch rejected (it is acknowledged as a sync_conflict instead).
+   */
+  deliveries: z
+    .array(
+      z.object({
+        id: OutboxId,
+        session: OutboxSession,
+        channel: DeliveryChannelSchema,
+        to: z.string().max(320),
+        requestedAt: IsoTime,
+      }),
+    )
+    .max(200)
+    .default([]),
 });
 
 type Outbox = z.infer<typeof OutboxBody>;
@@ -201,6 +218,13 @@ async function applyMoneyOutbox(
     await run(a.id, 'cash', () => recordCashApproval(db, device, a));
   for (const s of body.sessions)
     await run(s.id, 'session', () => syncDeviceSession(db, device, s.session));
+  // After the session record: a delivery can then never be the session's first contact.
+  for (const d of body.deliveries)
+    await run(d.id, 'delivery', async () => {
+      const r = await queueDelivery(db, device, deps.secretBox, d);
+      // The worker also polls; the wake only makes the message go out right away.
+      if (r.created) void deps.jobs.wake(d.session.id).catch(() => undefined);
+    });
   return accepted;
 }
 

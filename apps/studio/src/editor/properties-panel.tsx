@@ -660,7 +660,73 @@ function TypeSection({ el, update }: { el: Element; update: Update }) {
       return <ConsentProps el={el} update={update} />;
     case 'survey-question':
       return <SurveyProps el={el} update={update} />;
+    case 'contact-input':
+      return <ContactInputProps el={el} update={update} />;
   }
+}
+
+function ContactInputProps({ el, update }: { el: ElementOf<'contact-input'>; update: Update }) {
+  return (
+    <Section title="Kirim hasil">
+      <SelectField
+        label="Kirim lewat"
+        value={el.channel}
+        options={[
+          { value: 'whatsapp', label: 'WhatsApp (keypad angka)' },
+          { value: 'email', label: 'E-mail (keyboard huruf)' },
+        ]}
+        onCommit={(channel) =>
+          update('saluran', {
+            channel,
+            placeholder: channel === 'whatsapp' ? 'Nomor WhatsApp' : 'Alamat e-mail',
+          })
+        }
+      />
+      <p className="text-xs text-muted-foreground">
+        Pembeli mengetik nomor/e-mail lalu menekan tombol kirim; link unduhan dikirim platform
+        begitu booth online. Maksimal 3 kiriman per sesi.
+      </p>
+      <TextField
+        label="Teks petunjuk"
+        value={el.placeholder}
+        onCommit={(placeholder) => update('teks petunjuk', { placeholder })}
+      />
+      <TextField
+        label="Tulisan tombol kirim"
+        value={el.submitLabel}
+        onCommit={(submitLabel) => submitLabel.trim() && update('tombol kirim', { submitLabel })}
+      />
+      <NumberField
+        label="Jarak tombol"
+        value={el.gap}
+        min={0}
+        onCommit={(gap) => update('jarak tombol', { gap })}
+      />
+      <TextStyleFields
+        value={el.textStyle}
+        onChange={(textStyle) => update('teks kolom', { textStyle })}
+      />
+      <BoxStyleFields
+        fillLabel="Kolom"
+        value={el.fieldStyle}
+        onChange={(fieldStyle) => update('gaya kolom', { fieldStyle })}
+      />
+      <TextStyleFields
+        value={el.keyTextStyle}
+        onChange={(keyTextStyle) => update('teks tombol', { keyTextStyle })}
+      />
+      <BoxStyleFields
+        fillLabel="Tombol"
+        value={el.keyStyle}
+        onChange={(keyStyle) => update('gaya tombol', { keyStyle })}
+      />
+      <BoxStyleFields
+        fillLabel="Tombol kirim"
+        value={el.submitStyle}
+        onChange={(submitStyle) => update('gaya tombol kirim', { submitStyle })}
+      />
+    </Section>
+  );
 }
 
 function ConsentProps({ el, update }: { el: ElementOf<'consent-checkbox'>; update: Update }) {

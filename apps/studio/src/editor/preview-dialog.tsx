@@ -182,6 +182,7 @@ function PreviewPlayer({
     progress: ctx.progress,
     downloadUrl: session?.downloadUrl ?? null,
     ...responsesForRenderer(ctx.responses),
+    contacts: ctx.contacts,
     canAction: (a) => snapshot.can(uiActionToEvent(a)),
   };
 

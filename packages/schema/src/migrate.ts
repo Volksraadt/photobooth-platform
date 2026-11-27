@@ -10,7 +10,13 @@ type Migration = (config: Record<string, unknown>) => Record<string, unknown>;
 const MIGRATIONS: Record<number, Migration> = {
   1: splitVoucherFieldKeypad,
   2: addResponseElements,
+  3: addContactInput,
 };
+
+/** v3 → v4 (F9): adds the `contact-input` element type. No content change (see v2 → v3). */
+function addContactInput(config: Record<string, unknown>): Record<string, unknown> {
+  return { ...config, schemaVersion: 4 };
+}
 
 /**
  * v2 → v3 (F8): adds the `consent-checkbox` and `survey-question` element types. Existing

@@ -6,6 +6,7 @@ import {
   PaymentAlreadyPaidError,
   PaymentOfflineError,
   type CaptureShotInput,
+  type DeliverResultInput,
   type FlowEvent,
   type ProcessSessionInput,
   type RedeemVoucherOutput,
@@ -31,6 +32,7 @@ function start(
     /** createPayment fails for a non-network reason (e.g. Midtrans not set up). */
     paymentFails?: boolean;
     voucher?: (code: string) => RedeemVoucherOutput;
+    deliverFails?: boolean;
   } = {},
 ) {
   const calls = {
@@ -40,6 +42,7 @@ function start(
     payments: 0,
     vouchers: [] as string[],
     processed: [] as ProcessSessionInput['session'][],
+    deliveries: [] as DeliverResultInput[],
   };
   const machine = flowMachine.provide({
     actors: {
@@ -71,6 +74,10 @@ function start(
         return opts.voucher
           ? opts.voucher(input.code)
           : { ok: false as const, reason: 'invalid' as const };
+      }),
+      deliverResult: fromPromise<void, DeliverResultInput>(async ({ input }) => {
+        if (opts.deliverFails) throw new Error('agent tidak bisa dihubungi');
+        calls.deliveries.push(input);
       }),
       processSession: fromCallback<FlowEvent, ProcessSessionInput>(({ sendBack, input }) => {
         calls.processed.push(input.session);
@@ -184,7 +191,7 @@ describe('flow machine', () => {
     h.send({ type: 'CONFIRM' });
     expect(h.state().value).toBe('processing');
     await h.tick(100);
-    expect(h.state().value).toBe('result');
+    expect(h.state().matches('result')).toBe(true);
     expect(h.state().context.session!.downloadUrl).toBe(`https://pb.test/s/${code}`);
 
     await h.tick(config.flow.resultAutoReturnSec * 1000);
@@ -827,5 +834,101 @@ describe('F8: consent + survey', () => {
     await h.tick(config.flow.idleTimeoutSec.review! * 1000);
     expect(h.state().value).not.toBe('review');
     expect(h.calls.processed[0]!.responses).toEqual([]);
+  });
+});
+
+function contactInput(id: string, channel: 'whatsapp' | 'email'): Element {
+  return {
+    ...BASE,
+    id,
+    name: 'Kirim',
+    type: 'contact-input',
+    channel,
+    placeholder: channel === 'whatsapp' ? 'Nomor WhatsApp' : 'Alamat e-mail',
+    textStyle: TEXT,
+    fieldStyle: {},
+    keyTextStyle: TEXT,
+    keyStyle: {},
+    submitLabel: 'Kirim',
+    submitStyle: {},
+    gap: 8,
+  };
+}
+
+describe('F9: send the link from the Result page', () => {
+  async function toResult(h: Harness) {
+    await toCapture(h);
+    await h.tick(SHOT_MS * 4);
+    h.send({ type: 'NEXT' });
+    h.send({ type: 'CONFIRM' });
+    await h.tick(100);
+    expect(h.state().matches('result')).toBe(true);
+  }
+  const type = (h: Harness, elementId: string, text: string) => {
+    for (const key of text) h.send({ type: 'CONTACT.KEY', elementId, key });
+  };
+
+  it('WhatsApp: digits only, invalid number refused, valid one is sent normalised', async () => {
+    const h = start(
+      makeConfig((c) => c.pages.result.elements.push(contactInput('wa', 'whatsapp'))),
+    );
+    await toResult(h);
+    type(h, 'wa', '08a12');
+    expect(h.state().context.contacts.wa).toEqual({ value: '0812', status: 'idle' });
+    h.send({ type: 'CONTACT.SUBMIT', elementId: 'wa' });
+    expect(h.state().context.contacts.wa!.status).toBe('invalid');
+
+    type(h, 'wa', '34567890');
+    h.send({ type: 'CONTACT.SUBMIT', elementId: 'wa' });
+    expect(h.state().context.contacts.wa!.status).toBe('sending');
+    await h.tick(0);
+    expect(h.state().context.contacts.wa!.status).toBe('sent');
+    expect(h.calls.deliveries).toEqual([
+      expect.objectContaining({
+        channel: 'whatsapp',
+        to: '6281234567890',
+        sessionCode: h.state().context.session!.code,
+      }),
+    ]);
+  });
+
+  it('e-mail: lower-cases, accepts chunks like ".com"; a failed request can be retried', async () => {
+    const h = start(
+      makeConfig((c) => c.pages.result.elements.push(contactInput('em', 'email'))),
+      { deliverFails: true },
+    );
+    await toResult(h);
+    type(h, 'em', 'Budi@Gmail');
+    h.send({ type: 'CONTACT.KEY', elementId: 'em', key: '.com' });
+    h.send({ type: 'CONTACT.KEY', elementId: 'em', key: ' ' });
+    expect(h.state().context.contacts.em!.value).toBe('budi@gmail.com');
+    h.send({ type: 'CONTACT.SUBMIT', elementId: 'em' });
+    await h.tick(0);
+    expect(h.state().context.contacts.em!.status).toBe('error');
+    h.send({ type: 'CONTACT.BACKSPACE', elementId: 'em' });
+    expect(h.state().context.contacts.em).toEqual({ value: 'budi@gmail.co', status: 'idle' });
+  });
+
+  it('typing restarts the auto-return; at most 3 sends per session; next buyer starts empty', async () => {
+    const config = makeConfig((c) => c.pages.result.elements.push(contactInput('wa', 'whatsapp')));
+    const h = start(config);
+    await toResult(h);
+    const ms = config.flow.resultAutoReturnSec * 1000;
+    await h.tick(ms - 1000);
+    type(h, 'wa', '081234567890');
+    await h.tick(ms - 1000);
+    expect(h.state().matches('result')).toBe(true);
+
+    for (let i = 0; i < 4; i++) {
+      h.send({ type: 'CONTACT.SUBMIT', elementId: 'wa' });
+      await h.tick(0);
+    }
+    expect(h.calls.deliveries).toHaveLength(3);
+    expect(h.state().context.contacts.wa!.status).toBe('limit');
+
+    await h.tick(ms);
+    expect(h.state().value).toBe('cover');
+    expect(h.state().context.contacts).toEqual({});
+    expect(h.state().context.deliveriesRequested).toBe(0);
   });
 });

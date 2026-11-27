@@ -11,7 +11,11 @@ export type FlowUiAction =
   | { kind: 'voucherSubmit' }
   /** consent-checkbox / survey-question (F8). */
   | { kind: 'toggleConsent'; elementId: string }
-  | { kind: 'selectOption'; elementId: string; optionId: string };
+  | { kind: 'selectOption'; elementId: string; optionId: string }
+  /** contact-input (F9). */
+  | { kind: 'contactKey'; elementId: string; key: string }
+  | { kind: 'contactBackspace'; elementId: string }
+  | { kind: 'contactSubmit'; elementId: string };
 
 export function uiActionToEvent(action: FlowUiAction): FlowEvent {
   switch (action.kind) {
@@ -49,6 +53,12 @@ export function uiActionToEvent(action: FlowUiAction): FlowEvent {
       return { type: 'VOUCHER.SUBMIT' };
     case 'toggleConsent':
       return { type: 'CONSENT.TOGGLE', elementId: action.elementId };
+    case 'contactKey':
+      return { type: 'CONTACT.KEY', elementId: action.elementId, key: action.key };
+    case 'contactBackspace':
+      return { type: 'CONTACT.BACKSPACE', elementId: action.elementId };
+    case 'contactSubmit':
+      return { type: 'CONTACT.SUBMIT', elementId: action.elementId };
     case 'selectOption':
       return { type: 'SURVEY.SELECT', elementId: action.elementId, optionId: action.optionId };
   }

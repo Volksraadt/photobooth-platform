@@ -394,3 +394,66 @@ describe('F8: consent + survey elements', () => {
     expect(onAction).not.toHaveBeenCalled();
   });
 });
+
+describe('F9: contact-input', () => {
+  const text = {
+    fontFamily: 'Inter',
+    fontSize: 28,
+    fontWeight: 400,
+    color: '#111',
+    align: 'left' as const,
+    lineHeight: 1.3,
+    letterSpacing: 0,
+  };
+  const el = (channel: 'whatsapp' | 'email') => ({
+    id: `c-${channel}`,
+    name: 'Kirim',
+    type: 'contact-input' as const,
+    x: 0,
+    y: 0,
+    width: 600,
+    height: 500,
+    rotation: 0,
+    opacity: 1,
+    visible: true,
+    locked: false,
+    channel,
+    placeholder: 'Nomor WhatsApp',
+    textStyle: text,
+    fieldStyle: {},
+    keyTextStyle: text,
+    keyStyle: {},
+    submitLabel: 'Kirim',
+    submitStyle: {},
+    gap: 8,
+  });
+
+  it('shows the typed number grouped, the status, and emits key / backspace / submit', () => {
+    const onAction = vi.fn();
+    const { container } = render(
+      <PageRenderer
+        page={{ ...config.pages.result, elements: [el('whatsapp'), el('email')] }}
+        config={config}
+        mode="live"
+        runtime={{ contacts: { 'c-whatsapp': { value: '081234567', status: 'invalid' } } }}
+        onAction={onAction}
+      />,
+    );
+    const wa = q(container, '[data-pb-contact="whatsapp"]')!;
+    expect(wa.dataset.pbContactStatus).toBe('invalid');
+    expect(wa.textContent).toContain('0812 3456 7');
+    expect(wa.textContent).toContain('Nomor WhatsApp belum benar');
+    expect(wa.querySelectorAll('[data-pb-contact-key]')).toHaveLength(12);
+    fireEvent.click(q(wa, '[data-pb-contact-key="5"]')!);
+    fireEvent.click(q(wa, '[data-pb-contact-key="back"]')!);
+    fireEvent.click(q(wa, '[data-pb-contact-key="submit"]')!);
+    const em = q(container, '[data-pb-contact="email"]')!;
+    fireEvent.click(q(em, '[data-pb-contact-key=".com"]')!);
+    expect(onAction.mock.calls).toEqual([
+      [{ kind: 'contactKey', elementId: 'c-whatsapp', key: '5' }],
+      [{ kind: 'contactBackspace', elementId: 'c-whatsapp' }],
+      [{ kind: 'contactSubmit', elementId: 'c-whatsapp' }],
+      [{ kind: 'contactKey', elementId: 'c-email', key: '.com' }],
+    ]);
+  });
+});

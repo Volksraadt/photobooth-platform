@@ -149,6 +149,8 @@ export type OutboxBatch = {
   voucherUses?: { id: string; [k: string]: unknown }[];
   cashApprovals?: { id: string; [k: string]: unknown }[];
   sessions?: { id: string; session: Record<string, unknown> }[];
+  /** F9: "send my link" requests (the platform sends them; nothing secret on the booth). */
+  deliveries?: { id: string; [k: string]: unknown }[];
 };
 
 export type SessionRefBody = { id: string; code: string; startedAt: string };
