@@ -1,4 +1,4 @@
-import { createDefaultBoothConfig, type BoothConfig } from '@pb/schema';
+import { createDefaultBoothConfig, type BoothConfig, type Element } from '@pb/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createActor, fromCallback, fromPromise } from 'xstate';
 import { flowMachine } from './machine';
@@ -39,6 +39,7 @@ function start(
     captures: 0,
     payments: 0,
     vouchers: [] as string[],
+    processed: [] as ProcessSessionInput['session'][],
   };
   const machine = flowMachine.provide({
     actors: {
@@ -72,6 +73,7 @@ function start(
           : { ok: false as const, reason: 'invalid' as const };
       }),
       processSession: fromCallback<FlowEvent, ProcessSessionInput>(({ sendBack, input }) => {
+        calls.processed.push(input.session);
         const t = setTimeout(() => {
           sendBack({ type: 'PROCESSING.PROGRESS', progress: 0.5 });
           sendBack({
@@ -661,5 +663,169 @@ describe('extra prints (chosen on Pilih Frame, paid at Payment)', () => {
     await free.tick(60_000);
     free.send({ type: 'ADD_PRINT' });
     expect(free.state().context.session!.extraPrints).toBe(0);
+  });
+});
+
+const TEXT = {
+  fontFamily: 'Inter',
+  fontSize: 28,
+  fontWeight: 400,
+  color: '#111',
+  align: 'left' as const,
+  lineHeight: 1.3,
+  letterSpacing: 0,
+};
+const BASE = {
+  x: 0,
+  y: 0,
+  width: 600,
+  height: 80,
+  rotation: 0,
+  opacity: 1,
+  visible: true,
+  locked: false,
+};
+
+function consent(id: string, required = true): Element {
+  return {
+    ...BASE,
+    id,
+    name: 'Persetujuan',
+    type: 'consent-checkbox',
+    label: 'Saya setuju foto disimpan',
+    required,
+    textStyle: TEXT,
+    boxSize: 40,
+    boxStyle: { borderColor: '#111', borderWidth: 2 },
+    checkedStyle: { fill: '#111' },
+    checkColor: '#fff',
+  };
+}
+
+function question(id: string, opts: { required?: boolean; multiple?: boolean } = {}): Element {
+  return {
+    ...BASE,
+    id,
+    name: 'Pertanyaan',
+    type: 'survey-question',
+    question: 'Tahu booth ini dari mana?',
+    options: [
+      { id: 'ig', label: 'Instagram' },
+      { id: 'tt', label: 'TikTok' },
+      { id: 'fr', label: 'Teman' },
+    ],
+    multiple: opts.multiple ?? false,
+    required: opts.required ?? true,
+    layout: 'row',
+    columns: 3,
+    gap: 12,
+    optionTextStyle: TEXT,
+    optionStyle: { borderColor: '#111', borderWidth: 2 },
+    selectedStyle: { fill: '#111' },
+  };
+}
+
+describe('F8: consent + survey', () => {
+  it('Cover: START waits for the required consent; untick blocks again', () => {
+    const h = start(makeConfig((c) => c.pages.cover.elements.push(consent('c1'))));
+    expect(h.state().can({ type: 'START' })).toBe(false);
+    h.send({ type: 'START' });
+    expect(h.state().value).toBe('cover');
+
+    h.send({ type: 'CONSENT.TOGGLE', elementId: 'c1' });
+    expect(h.state().context.responses.c1).toMatchObject({
+      kind: 'consent',
+      page: 'cover',
+      label: 'Saya setuju foto disimpan',
+    });
+    h.send({ type: 'CONSENT.TOGGLE', elementId: 'c1' });
+    expect(h.state().context.responses.c1).toBeUndefined();
+    expect(h.state().can({ type: 'START' })).toBe(false);
+
+    h.send({ type: 'CONSENT.TOGGLE', elementId: 'c1' });
+    h.send({ type: 'START' });
+    expect(h.state().context.page).toBe('tutorial');
+  });
+
+  it('optional elements never block; taps for elements of other pages are ignored', () => {
+    const h = start(
+      makeConfig((c) => {
+        c.pages.cover.elements.push(consent('c1', false));
+        c.pages.review.elements.push(question('q1'));
+      }),
+    );
+    h.send({ type: 'SURVEY.SELECT', elementId: 'q1', optionId: 'ig' });
+    expect(h.state().context.responses).toEqual({});
+    h.send({ type: 'START' });
+    expect(h.state().context.page).toBe('tutorial');
+  });
+
+  it('single choice replaces; multiple toggles and keeps the design order', () => {
+    const h = start(
+      makeConfig((c) => {
+        c.pages.framePick.elements.push(question('one'), question('many', { multiple: true }));
+      }),
+    );
+    h.send({ type: 'START' });
+    h.send({ type: 'NEXT' });
+    expect(h.state().value).toBe('framePick');
+    expect(h.state().can({ type: 'NEXT' })).toBe(false);
+
+    h.send({ type: 'SURVEY.SELECT', elementId: 'one', optionId: 'tt' });
+    h.send({ type: 'SURVEY.SELECT', elementId: 'one', optionId: 'ig' });
+    h.send({ type: 'SURVEY.SELECT', elementId: 'one', optionId: 'ig' });
+    expect(h.state().context.responses.one).toMatchObject({ optionIds: ['ig'] });
+
+    h.send({ type: 'SURVEY.SELECT', elementId: 'many', optionId: 'fr' });
+    h.send({ type: 'SURVEY.SELECT', elementId: 'many', optionId: 'ig' });
+    h.send({ type: 'SURVEY.SELECT', elementId: 'many', optionId: 'nope' });
+    expect(h.state().context.responses.many).toMatchObject({
+      optionIds: ['ig', 'fr'],
+      optionLabels: ['Instagram', 'Teman'],
+    });
+    h.send({ type: 'SURVEY.SELECT', elementId: 'many', optionId: 'ig' });
+    h.send({ type: 'SURVEY.SELECT', elementId: 'many', optionId: 'fr' });
+    expect(h.state().context.responses.many).toBeUndefined();
+    expect(h.state().can({ type: 'NEXT' })).toBe(false);
+
+    h.send({ type: 'SURVEY.SELECT', elementId: 'many', optionId: 'tt' });
+    h.send({ type: 'NEXT' });
+    expect(h.state().value).toMatchObject({ payment: expect.anything() });
+  });
+
+  it('answers from Cover and Review reach processing; Cover clears them for the next buyer', async () => {
+    const h = start(
+      makeConfig((c) => {
+        c.pages.cover.elements.push(consent('c1'));
+        c.pages.review.elements.push(question('q1'));
+      }),
+    );
+    h.send({ type: 'CONSENT.TOGGLE', elementId: 'c1' });
+    await toCapture(h);
+    await h.tick(SHOT_MS * 4);
+    h.send({ type: 'NEXT' });
+    expect(h.state().value).toBe('review');
+    h.send({ type: 'CONFIRM' });
+    expect(h.state().value).toBe('review');
+    h.send({ type: 'SURVEY.SELECT', elementId: 'q1', optionId: 'fr' });
+    h.send({ type: 'CONFIRM' });
+    expect(h.state().value).toBe('processing');
+    expect(h.calls.processed[0]!.responses.map((r) => r.elementId)).toEqual(['c1', 'q1']);
+
+    await h.tick(100);
+    await h.tick(60_000);
+    expect(h.state().value).toBe('cover');
+    expect(h.state().context.responses).toEqual({});
+  });
+
+  it('a paid session idling on Review still goes to processing with what was answered', async () => {
+    const config = makeConfig((c) => c.pages.review.elements.push(question('q1')));
+    const h = start(config);
+    await toCapture(h);
+    await h.tick(SHOT_MS * 4);
+    h.send({ type: 'NEXT' });
+    await h.tick(config.flow.idleTimeoutSec.review! * 1000);
+    expect(h.state().value).not.toBe('review');
+    expect(h.calls.processed[0]!.responses).toEqual([]);
   });
 });

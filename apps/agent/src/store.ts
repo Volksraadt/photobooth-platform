@@ -502,11 +502,12 @@ export class AgentStore {
     );
   }
 
-  markSessionUploaded(id: string) {
+  /** `atIso`: the upload queue's clock, which also decides when retention is over. */
+  markSessionUploaded(id: string, atIso: string = now()) {
     this.run(
       `update local_sessions set sync_status = 'uploaded', uploaded_at = ?, upload_error = null,
          upload_next_at = null, updated_at = ? where id = ?`,
-      now(),
+      atIso,
       now(),
       id,
     );

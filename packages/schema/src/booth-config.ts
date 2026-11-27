@@ -6,7 +6,7 @@ import { FilterSchema } from './filter';
 import { FrameSchema, PrintProfileSchema } from './frame';
 import { PageSchema, PageTypeSchema } from './page';
 
-export const CURRENT_SCHEMA_VERSION = 2 as const;
+export const CURRENT_SCHEMA_VERSION = 3 as const;
 
 export const ArtboardSchema = z.object({
   width: z.number().int().positive().max(8192),

@@ -20,6 +20,31 @@ export type Shot = {
 
 export type SessionPaymentMethod = PaymentMethod | 'free';
 
+/**
+ * A buyer's answer to a `consent-checkbox` (ticked) or `survey-question` (options picked).
+ * Texts are copied from the design so reports stay readable after the owner edits it.
+ * Unticked consents and questions left empty have no entry.
+ */
+export type FlowResponse =
+  | {
+      kind: 'consent';
+      elementId: string;
+      page: PageType;
+      label: string;
+      /** ISO 8601, UTC. */
+      answeredAt: string;
+    }
+  | {
+      kind: 'survey';
+      elementId: string;
+      page: PageType;
+      question: string;
+      optionIds: string[];
+      optionLabels: string[];
+      /** ISO 8601, UTC. */
+      answeredAt: string;
+    };
+
 export type FlowSession = {
   id: string;
   /** 8 chars, see generateSessionCode(). */
@@ -41,6 +66,8 @@ export type FlowSession = {
   takes: Shot[];
   filterId: string;
   extraPrints: number;
+  /** Consent + survey answers (F8); filled from FlowContext.responses when processing starts. */
+  responses: FlowResponse[];
   downloadUrl: string | null;
   completedAt: string | null;
 };
@@ -124,6 +151,11 @@ export type FlowContext = {
    * visit to Payment so a fixed setup is picked up.
    */
   qrisUnavailable: boolean;
+  /**
+   * Consent + survey answers by element id. Kept outside the session because Cover answers come
+   * before the session starts; cleared on every return to Cover.
+   */
+  responses: Record<string, FlowResponse>;
 };
 
 export type FlowInput = {
@@ -145,6 +177,10 @@ export type FlowEvent =
   | { type: 'RETAKE_ALL' }
   | { type: 'ADD_PRINT' }
   | { type: 'REMOVE_PRINT' }
+  /** Tick / untick a consent-checkbox on the current page. */
+  | { type: 'CONSENT.TOGGLE'; elementId: string }
+  /** Tap an option of a survey-question on the current page (single: replaces; multiple: toggles). */
+  | { type: 'SURVEY.SELECT'; elementId: string; optionId: string }
   /** QRIS settled (paymentId), or cash approved by the operator (method: 'cash'). */
   | { type: 'PAYMENT.PAID'; paymentId?: string; method?: PaymentMethod }
   | { type: 'NETWORK.ONLINE' }

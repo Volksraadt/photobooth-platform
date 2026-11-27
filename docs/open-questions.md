@@ -12,7 +12,7 @@
 | 8 | Apakah owner boleh menaruh biaya MDR ke pembeli | Tidak, harga sudah termasuk (F4: fee dicatat sebagai pengurang `net_amount`, tidak ditambahkan ke tagihan) | F6 |
 | 9 | Konfirmasi regulasi model "dana langsung ke owner" dengan Midtrans/konsultan | Belum | Sebelum launch |
 | 10 | Apakah QR yang tidak dibayar dikenai biaya di Xendit (Processing Fee per percobaan) | Belum dicek | Sebelum F7 Xendit |
-| 11 | Persetujuan pembeli atas penyimpanan foto (privasi, UU PDP) | Teks persetujuan singkat di Cover/Tutorial yang dapat diatur owner. F1: config default sudah memuatnya di Cover (elemen teks biasa); isi teks perlu ditinjau hukum | Sebelum launch |
+| 11 | Persetujuan pembeli atas penyimpanan foto (privasi, UU PDP) | Teks persetujuan singkat di Cover/Tutorial yang dapat diatur owner. F1: config default sudah memuatnya di Cover (elemen teks biasa); isi teks perlu ditinjau hukum. **2026-11-27 (F8):** elemen `consent-checkbox` tersedia (centang wajib, teks pernyataan tersimpan per sesi); config bawaan belum memakainya | Sebelum launch |
 | 12 | Proyek Supabase dev (butuh akun owner; tidak bisa dibuat dari repo) | **2026-11-25: proyek dev hosted (Singapura) dipakai; login e-mail + migrasi + seed lolos** (session pooler port 5432; transaction pooler 6543 diblokir jaringan dev). Token ditandatangani ES256 → API pakai JWKS, `SUPABASE_JWT_SECRET` kosong. Login Google belum diuji. Pengirim e-mail bawaan Supabase hanya ke anggota tim (±2/jam): SMTP sendiri sebelum launch | Sebelum F2 selesai |
 | 13 | Batas frame plan Starter ("Terbatas" di PRD) | `maxFrames: 5`; Business `maxBooths: 10` ("10+") | F6 |
 | 14 | ~~Format hash PIN admin Kiosk (`admin.pinHash`)~~ | **Diputuskan F1**: PBKDF2-SHA256, lihat `docs/schema.md` A.6 | — |
@@ -58,3 +58,5 @@
 | 54 | Menghapus booth dari Studio (arsip/hapus) | **Selesai 2026-11-25:** arsip (status `inactive`, perangkat dicabut, tidak dihitung batas paket) dan hapus permanen hanya tanpa sesi; lihat decisions | Selesai |
 | 55 | Worker (video/GIF, unggah Drive, siklus tagihan, refresh statistik) jalan di laptop booth selama deploy Vercel | Sesi diproses hanya saat laptop menyala; tagihan perpanjangan dibuat saat worker jalan. Opsi: worker di host yang selalu menyala (Fly/Railway/VPS), siklus tagihan via Vercel Cron ke endpoint API | Sebelum lebih dari satu booth / sebelum launch |
 | 56 | Vercel Hobby hanya untuk pemakaian non-komersial | Uji coba di Hobby; pilot dengan pembeli sungguhan pakai Vercel Pro atau pindah host | Sebelum pilot berbayar |
+| 57 | Pertanyaan survei dengan jawaban teks bebas (mis. e-mail untuk lead) | Tidak ada: hanya pilihan ganda karena Kiosk tanpa keyboard layar. Datang bersama paket kirim WhatsApp/e-mail (F9), yang butuh input nomor/e-mail | F9 |
+| 58 | Ringkasan survei di Rekap (jumlah per pilihan) | Belum: jawaban terlihat di detail sesi dan ekspor CSV/Excel | Setelah owner memakai survei |

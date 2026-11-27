@@ -1,5 +1,6 @@
 'use client';
 
+import { createId } from '@paralleldrive/cuid2';
 import {
   type Background,
   type BoothConfig,
@@ -655,7 +656,182 @@ function TypeSection({ el, update }: { el: Element; update: Update }) {
           />
         </Section>
       );
+    case 'consent-checkbox':
+      return <ConsentProps el={el} update={update} />;
+    case 'survey-question':
+      return <SurveyProps el={el} update={update} />;
   }
+}
+
+function ConsentProps({ el, update }: { el: ElementOf<'consent-checkbox'>; update: Update }) {
+  return (
+    <Section title="Persetujuan">
+      <TextField
+        label="Pernyataan"
+        multiline
+        value={el.label}
+        testId="prop-consent-label"
+        onCommit={(label) => label.trim() && update('pernyataan', { label: label.trim() })}
+      />
+      <Toggle
+        label="Wajib dicentang"
+        value={el.required}
+        testId="prop-consent-required"
+        onCommit={(required) => update('wajib', { required })}
+      />
+      <p className="text-xs text-muted-foreground">
+        Wajib: tombol lanjut di halaman ini mati sampai pembeli mencentang. Teks pernyataan disimpan
+        bersama sesi.
+      </p>
+      <NumberField
+        label="Ukuran kotak"
+        value={el.boxSize}
+        min={8}
+        max={400}
+        onCommit={(boxSize) => update('ukuran kotak', { boxSize })}
+      />
+      <ColorField
+        label="Warna centang"
+        value={el.checkColor}
+        onCommit={(checkColor) => update('warna centang', { checkColor })}
+      />
+      <TextStyleFields
+        value={el.textStyle}
+        onChange={(textStyle) => update('teks', { textStyle })}
+      />
+      <BoxStyleFields
+        fillLabel="Kotak"
+        value={el.boxStyle}
+        onChange={(boxStyle) => update('kotak', { boxStyle })}
+      />
+      <BoxStyleFields
+        fillLabel="Kotak dicentang"
+        value={el.checkedStyle}
+        onChange={(checkedStyle) => update('kotak dicentang', { checkedStyle })}
+      />
+    </Section>
+  );
+}
+
+const MAX_SURVEY_OPTIONS = 12;
+
+function SurveyProps({ el, update }: { el: ElementOf<'survey-question'>; update: Update }) {
+  const setOptions = (options: ElementOf<'survey-question'>['options']) =>
+    update('pilihan jawaban', { options });
+  return (
+    <Section title="Pertanyaan survei">
+      <TextField
+        label="Pertanyaan"
+        value={el.question}
+        testId="prop-survey-question"
+        onCommit={(question) => update('pertanyaan', { question })}
+      />
+      <Toggle
+        label="Wajib dijawab"
+        value={el.required}
+        testId="prop-survey-required"
+        onCommit={(required) => update('wajib', { required })}
+      />
+      <Toggle
+        label="Boleh pilih lebih dari satu"
+        value={el.multiple}
+        onCommit={(multiple) => update('pilihan ganda', { multiple })}
+      />
+      <div className="space-y-1" data-testid="prop-survey-options">
+        {el.options.map((o, i) => (
+          <div key={o.id} className="flex items-end gap-1">
+            <div className="flex-1">
+              <TextField
+                label={`Pilihan ${i + 1}`}
+                value={o.label}
+                onCommit={(label) =>
+                  label.trim() &&
+                  setOptions(
+                    el.options.map((x) => (x.id === o.id ? { ...x, label: label.trim() } : x)),
+                  )
+                }
+              />
+            </div>
+            <IconButton
+              title={`Hapus pilihan ${i + 1}`}
+              disabled={el.options.length <= 1}
+              onClick={() => setOptions(el.options.filter((x) => x.id !== o.id))}
+            >
+              ✕
+            </IconButton>
+          </div>
+        ))}
+        <button
+          type="button"
+          className="text-xs text-primary hover:underline disabled:opacity-40"
+          disabled={el.options.length >= MAX_SURVEY_OPTIONS}
+          data-testid="prop-survey-add-option"
+          onClick={() =>
+            setOptions([
+              ...el.options,
+              { id: createId(), label: `Pilihan ${el.options.length + 1}` },
+            ])
+          }
+        >
+          + Tambah pilihan
+        </button>
+      </div>
+      <SelectField
+        label="Susunan"
+        value={el.layout}
+        options={[
+          { value: 'row', label: 'Satu baris' },
+          { value: 'grid', label: 'Grid' },
+          { value: 'column', label: 'Satu kolom' },
+        ]}
+        onCommit={(layout) => update('susunan', { layout })}
+      />
+      {el.layout === 'grid' && (
+        <NumberField
+          label="Kolom"
+          value={el.columns}
+          min={1}
+          max={6}
+          onCommit={(columns) => update('kolom', { columns })}
+        />
+      )}
+      <NumberField
+        label="Jarak"
+        value={el.gap}
+        min={0}
+        onCommit={(gap) => update('jarak', { gap })}
+      />
+      <Toggle
+        label="Tampilkan teks pertanyaan"
+        value={!!el.questionStyle}
+        onCommit={(on) =>
+          update('teks pertanyaan', {
+            questionStyle: on ? { ...el.optionTextStyle, fontWeight: 700 } : undefined,
+          })
+        }
+      />
+      {el.questionStyle && (
+        <TextStyleFields
+          value={el.questionStyle}
+          onChange={(questionStyle) => update('gaya pertanyaan', { questionStyle })}
+        />
+      )}
+      <TextStyleFields
+        value={el.optionTextStyle}
+        onChange={(optionTextStyle) => update('teks pilihan', { optionTextStyle })}
+      />
+      <BoxStyleFields
+        fillLabel="Pilihan"
+        value={el.optionStyle}
+        onChange={(optionStyle) => update('gaya pilihan', { optionStyle })}
+      />
+      <BoxStyleFields
+        fillLabel="Pilihan terpilih"
+        value={el.selectedStyle}
+        onChange={(selectedStyle) => update('gaya terpilih', { selectedStyle })}
+      />
+    </Section>
+  );
 }
 
 function pickText(el: ElementOf<'text'> | ElementOf<'price-label'>) {

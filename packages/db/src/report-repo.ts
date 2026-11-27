@@ -346,6 +346,8 @@ export type TransactionRow = {
   feeAmount: number;
   netAmount: number;
   extraPrints: number;
+  /** F8: consent + survey answers. */
+  responses: (typeof sessions.$inferSelect)['responses'];
   offline: boolean;
   syncedAt: Date | null;
   driveFolderUrl: string | null;
@@ -420,6 +422,7 @@ export async function listTransactions(
         feeAmount: s.feeAmount,
         netAmount: s.netAmount,
         extraPrints: s.extraPrints,
+        responses: s.responses,
         offline: s.offline,
         syncedAt: s.syncedAt,
         driveFolderUrl: s.driveFolderUrl,

@@ -13,7 +13,10 @@ export type RendererAction =
   // voucher-input (F4): keypad taps, physical keyboard / barcode scanner
   | { kind: 'voucherKey'; key: string }
   | { kind: 'voucherBackspace' }
-  | { kind: 'voucherSubmit' };
+  | { kind: 'voucherSubmit' }
+  // consent-checkbox / survey-question (F8)
+  | { kind: 'toggleConsent'; elementId: string }
+  | { kind: 'selectOption'; elementId: string; optionId: string };
 
 export type VoucherRuntimeStatus =
   | 'idle'
@@ -86,6 +89,12 @@ export type RenderRuntime = {
   /** 0..1; null = indeterminate. */
   progress?: number | null;
   downloadUrl?: string | null;
+
+  // Consent + survey (F8)
+  /** Element ids of ticked consent-checkbox elements. */
+  checkedConsents?: readonly string[];
+  /** Picked option ids per survey-question element id. */
+  surveyAnswers?: Readonly<Record<string, readonly string[]>>;
 
   /** Disabled actions render dimmed and ignore taps. Defaults to all enabled. */
   canAction?: (action: RendererAction) => boolean;

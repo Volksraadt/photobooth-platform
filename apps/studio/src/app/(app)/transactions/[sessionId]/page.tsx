@@ -122,6 +122,42 @@ export default async function SessionDetailPage({
             </CardContent>
           </Card>
 
+          {s.responses.length > 0 && (
+            <Card data-testid="session-responses">
+              <CardHeader>
+                <CardTitle className="text-base">Persetujuan dan survei</CardTitle>
+                <CardDescription>
+                  Jawaban pembeli, dengan teks seperti saat menjawab.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  {s.responses.map((r) => (
+                    <li key={r.elementId}>
+                      {r.kind === 'consent' ? (
+                        <>
+                          <span aria-hidden>✓ </span>
+                          {r.label}
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-muted-foreground">
+                            {r.question || 'Pertanyaan'}
+                          </span>
+                          <br />
+                          <b>{r.optionLabels.join(', ')}</b>
+                        </>
+                      )}
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {formatDateTime(new Date(r.answeredAt), tz)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base">File dan unggahan</CardTitle>

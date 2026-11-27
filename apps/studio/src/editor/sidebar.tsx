@@ -4,6 +4,7 @@ import { createId } from '@paralleldrive/cuid2';
 import {
   DEFAULT_STRIP_OVERLAY_ASSET_ID,
   ELEMENT_ALLOWED_PAGES,
+  RESPONSE_ELEMENT_TYPES,
   PAGE_TYPES,
   STATIC_ELEMENT_TYPES,
   defaultStripOverlayAsset,
@@ -206,6 +207,9 @@ export function SlidesBar() {
 
 // --- Add element ---------------------------------------------------------------------------
 
+const isResponseType = (t: ElementType) =>
+  (RESPONSE_ELEMENT_TYPES as readonly string[]).includes(t);
+
 export function AddElementMenu() {
   const store = useStore();
   const ctx = useCtx();
@@ -223,10 +227,14 @@ export function AddElementMenu() {
   const groups: [string, ElementType[]][] = [
     ['Statis', types.filter((t) => (STATIC_ELEMENT_TYPES as readonly string[]).includes(t))],
     ['Interaktif', types.filter((t) => t === 'button')],
+    ['Persetujuan & survei', types.filter(isResponseType)],
     [
       'Khusus',
       types.filter(
-        (t) => t !== 'button' && !(STATIC_ELEMENT_TYPES as readonly string[]).includes(t),
+        (t) =>
+          t !== 'button' &&
+          !isResponseType(t) &&
+          !(STATIC_ELEMENT_TYPES as readonly string[]).includes(t),
       ),
     ],
   ];

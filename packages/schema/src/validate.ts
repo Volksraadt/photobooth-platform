@@ -34,6 +34,9 @@ export const ELEMENT_ALLOWED_PAGES: Partial<Record<ElementType, readonly PageTyp
   progress: ['processing'],
   // Bought on Pilih Frame (paid at Payment); on Review it only shows the sheet count.
   'print-copies': ['framePick', 'review'],
+  // F8: answered before the forward button; the answers travel with the session to processing.
+  'consent-checkbox': ['cover', 'framePick', 'review'],
+  'survey-question': ['cover', 'framePick', 'review'],
 };
 
 const FRAME_DYNAMIC_TYPES: readonly ElementType[] = ['text', 'image', 'shape', 'download-qr'];
@@ -402,6 +405,16 @@ function checkSemantics(config: BoothConfig): ValidationIssue[] {
           `${path}.action.shotIndex`,
           `Tombol "${el.name}" mengulang foto ke-${el.action.shotIndex}, padahal frame hanya punya ${maxSlots} slot.`,
         );
+      }
+      if (el.type === 'survey-question') {
+        const ids = el.options.map((o) => o.id);
+        if (new Set(ids).size !== ids.length) {
+          add(
+            'survey-question.option-ids',
+            `${path}.options`,
+            `Pertanyaan "${el.name}" punya pilihan jawaban dengan id ganda.`,
+          );
+        }
       }
       if (el.type === 'photo-slot' && el.slotIndex > maxSlots) {
         add(

@@ -39,7 +39,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
               </span>
             </div>
             <div className="flex min-w-0 items-center gap-2 text-sm">
-              <span className="hidden truncate text-muted-foreground sm:inline" title={user.email ?? ''}>
+              <span
+                className="hidden truncate text-muted-foreground sm:inline"
+                title={user.email ?? ''}
+              >
                 {user.email}
               </span>
               <form action={logoutAction}>

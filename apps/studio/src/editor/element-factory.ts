@@ -29,6 +29,8 @@ export const ELEMENT_LABEL: Record<ElementType, string> = {
   'download-qr': 'QR unduh',
   progress: 'Progres',
   'print-copies': 'Jumlah cetak',
+  'consent-checkbox': 'Persetujuan',
+  'survey-question': 'Pertanyaan survei',
 };
 
 const FONT = 'Inter, system-ui, sans-serif';
@@ -66,6 +68,8 @@ const SIZE: Record<ElementType, [number, number]> = {
   'download-qr': [360, 360],
   progress: [800, 24],
   'print-copies': [400, 100],
+  'consent-checkbox': [900, 90],
+  'survey-question': [1000, 200],
 };
 
 /**
@@ -195,6 +199,35 @@ export function createElement(
       return make<'print-copies'>({
         textStyle: defaultTextStyle(48, { fontWeight: 700 }),
         buttonStyle: { fill: '#1e293b', borderRadius: 999 },
+      });
+    case 'consent-checkbox':
+      return make<'consent-checkbox'>({
+        label: 'Saya setuju foto saya disimpan dan dikirim sesuai kebijakan privasi booth ini.',
+        required: true,
+        textStyle: defaultTextStyle(28, { align: 'left', lineHeight: 1.3 }),
+        boxSize: 44,
+        boxStyle: { fill: '#ffffff', borderColor: '#cbd5e1', borderWidth: 3, borderRadius: 10 },
+        checkedStyle: { fill: '#ec4899', borderColor: '#ec4899' },
+        checkColor: '#ffffff',
+      });
+    case 'survey-question':
+      return make<'survey-question'>({
+        question: 'Tahu booth ini dari mana?',
+        options: [
+          { id: createId(), label: 'Instagram' },
+          { id: createId(), label: 'TikTok' },
+          { id: createId(), label: 'Teman' },
+          { id: createId(), label: 'Lewat saja' },
+        ],
+        multiple: false,
+        required: false,
+        layout: 'row',
+        columns: 2,
+        gap: 16,
+        questionStyle: defaultTextStyle(36, { fontWeight: 700 }),
+        optionTextStyle: defaultTextStyle(28),
+        optionStyle: { fill: '#1e293b', borderRadius: 16 },
+        selectedStyle: { fill: '#ec4899', borderRadius: 16 },
       });
   }
   // Keep the union exhaustive.

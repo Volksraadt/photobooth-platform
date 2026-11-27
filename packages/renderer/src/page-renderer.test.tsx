@@ -302,3 +302,95 @@ describe('PageRenderer', () => {
     expect(html).toContain('data-pb-element-type="camera-view"');
   });
 });
+
+describe('F8: consent + survey elements', () => {
+  const text = {
+    fontFamily: 'Inter',
+    fontSize: 28,
+    fontWeight: 400,
+    color: '#111',
+    align: 'left' as const,
+    lineHeight: 1.3,
+    letterSpacing: 0,
+  };
+  const base = {
+    x: 10,
+    y: 20,
+    width: 600,
+    height: 120,
+    rotation: 0,
+    opacity: 1,
+    visible: true,
+    locked: false,
+  };
+  const page = {
+    ...config.pages.cover,
+    elements: [
+      {
+        ...base,
+        id: 'c1',
+        name: 'Persetujuan',
+        type: 'consent-checkbox' as const,
+        label: 'Saya setuju',
+        required: true,
+        textStyle: text,
+        boxSize: 40,
+        boxStyle: { borderColor: '#111', borderWidth: 2 },
+        checkedStyle: { fill: '#111' },
+        checkColor: '#fff',
+      },
+      {
+        ...base,
+        id: 'q1',
+        name: 'Pertanyaan',
+        type: 'survey-question' as const,
+        question: 'Dari mana?',
+        options: [
+          { id: 'ig', label: 'Instagram' },
+          { id: 'fr', label: 'Teman' },
+        ],
+        multiple: false,
+        required: false,
+        layout: 'row' as const,
+        columns: 2,
+        gap: 8,
+        questionStyle: text,
+        optionTextStyle: text,
+        optionStyle: {},
+        selectedStyle: { fill: '#111' },
+      },
+    ],
+  };
+
+  it('shows the live state and emits toggleConsent / selectOption', () => {
+    const onAction = vi.fn();
+    const { container } = render(
+      <PageRenderer
+        page={page}
+        config={config}
+        mode="live"
+        runtime={{ checkedConsents: ['c1'], surveyAnswers: { q1: ['fr'] } }}
+        onAction={onAction}
+      />,
+    );
+    const box = q(container, '[data-pb-consent="c1"]')!;
+    expect(box.dataset.pbChecked).toBe('true');
+    expect(q(container, '[data-pb-option="fr"]')!.dataset.pbSelected).toBe('true');
+    expect(q(container, '[data-pb-option="ig"]')!.dataset.pbSelected).toBe('false');
+    fireEvent.click(box);
+    fireEvent.click(q(container, '[data-pb-option="ig"]')!);
+    expect(onAction.mock.calls).toEqual([
+      [{ kind: 'toggleConsent', elementId: 'c1' }],
+      [{ kind: 'selectOption', elementId: 'q1', optionId: 'ig' }],
+    ]);
+  });
+
+  it('is inert in editor mode', () => {
+    const onAction = vi.fn();
+    const { container } = render(
+      <PageRenderer page={page} config={config} mode="editor" onAction={onAction} />,
+    );
+    fireEvent.click(q(container, '[data-pb-consent="c1"]')!);
+    expect(onAction).not.toHaveBeenCalled();
+  });
+});

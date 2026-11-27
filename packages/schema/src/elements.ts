@@ -204,6 +204,49 @@ export const PrintCopiesElementSchema = BaseElementSchema.extend({
   buttonStyle: BoxStyleSchema.optional(),
 });
 
+// --- Buyer responses (F8): consent + survey ---
+
+/**
+ * Checkbox the buyer ticks to accept a statement (photo storage, terms). `required`: the page's
+ * forward buttons stay disabled until it is ticked. The label is stored with the answer.
+ */
+export const ConsentCheckboxElementSchema = BaseElementSchema.extend({
+  type: z.literal('consent-checkbox'),
+  label: z.string().min(1).max(1000),
+  required: z.boolean(),
+  textStyle: TextStyleSchema,
+  /** The square box (artboard px = its side). */
+  boxSize: z.number().positive().max(400),
+  boxStyle: BoxStyleSchema,
+  checkedStyle: BoxStyleSchema,
+  checkColor: ColorSchema,
+});
+
+export const SurveyOptionSchema = z.object({
+  id: IdSchema,
+  label: z.string().min(1).max(200),
+});
+export type SurveyOption = z.infer<typeof SurveyOptionSchema>;
+
+/** One multiple-choice question. Text answers are not offered (no on-screen keyboard). */
+export const SurveyQuestionElementSchema = BaseElementSchema.extend({
+  type: z.literal('survey-question'),
+  question: z.string().max(500),
+  options: z.array(SurveyOptionSchema).min(1).max(12),
+  /** true = any number of options; false = exactly one. */
+  multiple: z.boolean(),
+  required: z.boolean(),
+  layout: z.enum(['row', 'grid', 'column']),
+  /** grid only */
+  columns: z.number().int().min(1).max(6),
+  gap: NonNegative,
+  /** Question text; omitted = no question line (the owner draws it as a text element). */
+  questionStyle: TextStyleSchema.optional(),
+  optionTextStyle: TextStyleSchema,
+  optionStyle: BoxStyleSchema,
+  selectedStyle: BoxStyleSchema,
+});
+
 export const ElementSchema = z.discriminatedUnion('type', [
   ImageElementSchema,
   TextElementSchema,
@@ -224,6 +267,8 @@ export const ElementSchema = z.discriminatedUnion('type', [
   DownloadQrElementSchema,
   ProgressElementSchema,
   PrintCopiesElementSchema,
+  ConsentCheckboxElementSchema,
+  SurveyQuestionElementSchema,
 ]);
 export type Element = z.infer<typeof ElementSchema>;
 export type ElementType = Element['type'];
@@ -235,3 +280,10 @@ export const STATIC_ELEMENT_TYPES = [
   'shape',
   'video',
 ] as const satisfies readonly ElementType[];
+
+/** Element types that collect a buyer response (stored with the session). */
+export const RESPONSE_ELEMENT_TYPES = [
+  'consent-checkbox',
+  'survey-question',
+] as const satisfies readonly ElementType[];
+export type ResponseElementType = (typeof RESPONSE_ELEMENT_TYPES)[number];

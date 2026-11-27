@@ -1,4 +1,5 @@
 import { sha256Hex } from '@pb/crypto';
+import { SessionResponsesSchema } from '@pb/schema';
 import {
   activeConfigForDevice,
   createPairingCode,
@@ -136,6 +137,8 @@ const OutboxBody = z.object({
           paymentMethod: z.enum(['qris', 'voucher', 'cash', 'free']).nullable(),
           amount: z.number().int().nonnegative(),
           extraPrints: z.number().int().min(0).max(100),
+          /** F8; agents before F8 send none. */
+          responses: SessionResponsesSchema.default([]),
           offline: z.boolean(),
         }),
       }),

@@ -156,6 +156,8 @@ type ButtonAction =
 | `download-qr` | result | `padding`, `foreground`, `background` |
 | `progress` | processing | `variant: 'bar' \| 'spinner' \| 'steps'`, `color`, `trackColor?` |
 | `print-copies` | review | stepper jumlah cetak: `textStyle`, `buttonStyle?` |
+| `consent-checkbox` | cover, framePick, review | `label` (pernyataan), `required`, `textStyle`, `boxSize`, `boxStyle`, `checkedStyle`, `checkColor` — schema v3, lihat A.10 |
+| `survey-question` | cover, framePick, review | `question`, `options[]` (`id`, `label`, 1–12), `multiple`, `required`, `layout: 'row' \| 'grid' \| 'column'`, `columns`, `gap`, `questionStyle?`, `optionTextStyle`, `optionStyle`, `selectedStyle` — schema v3, lihat A.10 |
 
 > Catatan F0: properti pilihan tampilan bernama `variant` (bukan `style`) karena `style` sudah dipakai `BaseElement` untuk `BoxStyle`. Detail lengkap ada di bagian A.6.
 
@@ -307,7 +309,7 @@ Semua tabel bisnis punya `org_id`, `created_at`, `updated_at`. ID memakai `cuid2
 ### B.3 Sesi & pembayaran
 | Tabel | Kolom utama |
 |---|---|
-| `sessions` | org_id, booth_id, device_id, code (8 karakter, unik), frame_id, filter_id, status (`started` \| `paid` \| `capturing` \| `completed` \| `abandoned` \| `failed`), payment_method, gross_amount, fee_amount, net_amount, extra_prints, started_at, completed_at, synced_at, offline (bool), drive_folder_url |
+| `sessions` | org_id, booth_id, device_id, code (8 karakter, unik), frame_id, filter_id, status (`started` \| `paid` \| `capturing` \| `completed` \| `abandoned` \| `failed`), payment_method, gross_amount, fee_amount, net_amount, extra_prints, responses (jsonb `SessionResponse[]`, F8), started_at, completed_at, synced_at, offline (bool), drive_folder_url |
 | `session_shots` | session_id, slot_index, take_number, storage_path, width, height, selected (bool) |
 | `session_outputs` | session_id, kind (`original` \| `mirrored` \| `filtered` \| `composite` \| `gif` \| `video` \| `clip`), storage_path, drive_file_id, status |
 | `payments` | org_id, session_id, provider, order_id (unik), amount, status (`pending` \| `paid` \| `expired` \| `canceled` \| `failed` \| `paid_late`), qr_string, expires_at, paid_at, provider_ref, fee_amount, raw (jsonb) |
@@ -460,3 +462,10 @@ File `agent.sqlite` di folder data agent (Windows `%APPDATA%\photobooth-agent`, 
 - `print-copies` boleh di halaman `framePick` dan `review`. Tambah/kurangi hanya aktif di Pilih Frame; di Review (sudah dibayar) elemen hanya menampilkan jumlah lembar, tanpa tombol.
 - Nominal Pembayaran (QRIS, voucher, tunai) = harga frame + cetak tambahan × `extraPrintPrice`. Mode event: tidak ada cetak tambahan, harga frame 0.
 - Template bawaan: `print-copies` + label di Pilih Frame (daftar frame 1600×560 di y 190); Review tanpa jumlah cetak dan total. Bentuk config tidak berubah (tanpa migrasi); booth lama yang menjual cetak tambahan tanpa `print-copies` di Pilih Frame mendapat peringatan saat publish dan tidak menjual cetak tambahan.
+
+### A.10 Schema v3: persetujuan dan survei pembeli (F8, 2026-11-27)
+- `CURRENT_SCHEMA_VERSION` 2 → **3**. Elemen baru `consent-checkbox` dan `survey-question` (tabel elemen khusus di A.2), boleh di Cover, Pilih Frame, dan Review. Migrasi 2 → 3 tidak mengubah isi config; kenaikan versi hanya agar Kiosk lama menolak desain yang tidak bisa digambarnya.
+- Elemen `required: true` yang tampil di halaman aktif mengunci tombol maju halaman itu (`start`/`next` di Cover, `next`/`confirm` di Pilih Frame, `confirm`/`next`/`finish` di Review) sampai dicentang/dijawab; tombol tampil redup lewat `canAction`. Idle di Review setelah bayar tetap lanjut ke Processing walau belum dijawab (sesi berbayar tidak boleh tertahan).
+- Ketuk di mana saja pada `consent-checkbox` = centang/batal. `survey-question` `multiple: false` berlaku seperti radio (ketuk pilihan yang sama tidak membatalkan); `multiple: true` = centang/batal per pilihan. Id pilihan unik per pertanyaan (`survey-question.option-ids`). Tidak ada jawaban teks bebas (Kiosk tanpa keyboard layar).
+- Jawaban (`SessionResponse` di `packages/schema/src/session-response.ts`, sama dengan `FlowResponse` di `@pb/flow`): `{ kind: 'consent', elementId, page, label, answeredAt }` atau `{ kind: 'survey', elementId, page, question, optionIds, optionLabels, answeredAt }`. Teks disalin dari desain saat menjawab, jadi rekap tetap terbaca walau owner mengubah desain. Persetujuan yang tidak dicentang dan pertanyaan kosong tidak dicatat. Jawaban disimpan di konteks flow (Cover terjadi sebelum sesi dibuat), dihapus setiap kembali ke Cover, dan ikut ke `processSession` → agent (`/process`, disimpan di `data` sesi lokal) → outbox `session` → API → `sessions.responses` (migrasi `0010_f8_session_responses.sql`, default `[]`). Kiriman ulang tanpa `responses` (agent lama) tidak menghapus jawaban yang sudah tersimpan.
+- Studio: detail sesi menampilkan kartu "Persetujuan dan survei"; ekspor CSV/Excel transaksi menambah kolom **Persetujuan** dan **Survei** (satu baris per item di dalam sel).

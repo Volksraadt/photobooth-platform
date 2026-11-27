@@ -1,5 +1,5 @@
 import type { BoothConfig, ButtonActionKind, Frame, PageType } from '@pb/schema';
-import type { FlowSession } from './types';
+import type { FlowResponse, FlowSession } from './types';
 
 export function enabledFrames(config: BoothConfig): Frame[] {
   return config.frames.filter((f) => f.enabled).sort((a, b) => a.sortOrder - b.sortOrder);
@@ -55,4 +55,85 @@ export function idleTimeoutMs(config: BoothConfig, page: PageType | null): numbe
   if (!page) return null;
   const sec = config.flow.idleTimeoutSec[page];
   return sec ? sec * 1000 : null;
+}
+
+/** Visible consent-checkbox / survey-question elements of a page. */
+export function responseElements(config: BoothConfig, page: PageType | null) {
+  if (!page) return [];
+  return config.pages[page].elements.filter(
+    (e): e is Extract<typeof e, { type: 'consent-checkbox' | 'survey-question' }> =>
+      (e.type === 'consent-checkbox' || e.type === 'survey-question') && e.visible,
+  );
+}
+
+/** Every required consent on the page is ticked and every required question answered. */
+export function pageResponsesComplete(
+  config: BoothConfig,
+  page: PageType | null,
+  responses: Record<string, FlowResponse>,
+): boolean {
+  return responseElements(config, page).every((e) => !e.required || !!responses[e.id]);
+}
+
+/**
+ * Next answers after a tick / option tap, or null when the element is not on the current page
+ * (stale tap after a page change, unknown option).
+ */
+export function applyResponse(
+  config: BoothConfig,
+  page: PageType | null,
+  responses: Record<string, FlowResponse>,
+  input: { elementId: string; optionId?: string },
+  now: string,
+): Record<string, FlowResponse> | null {
+  const el = responseElements(config, page).find((e) => e.id === input.elementId);
+  if (!el || !page) return null;
+  const { [el.id]: current, ...rest } = responses;
+  if (el.type === 'consent-checkbox') {
+    if (input.optionId !== undefined) return null;
+    return current
+      ? rest
+      : {
+          ...rest,
+          [el.id]: { kind: 'consent', elementId: el.id, page, label: el.label, answeredAt: now },
+        };
+  }
+  const option = el.options.find((o) => o.id === input.optionId);
+  if (!option) return null;
+  const picked = current?.kind === 'survey' ? current.optionIds : [];
+  const nextIds = el.multiple
+    ? picked.includes(option.id)
+      ? picked.filter((id) => id !== option.id)
+      : [...picked, option.id]
+    : // Single choice behaves like radio buttons: tapping the picked option keeps it.
+      [option.id];
+  if (nextIds.length === 0) return rest;
+  // Keep the design's option order, whatever order the buyer tapped them in.
+  const ordered = el.options.filter((o) => nextIds.includes(o.id));
+  return {
+    ...rest,
+    [el.id]: {
+      kind: 'survey',
+      elementId: el.id,
+      page,
+      question: el.question,
+      optionIds: ordered.map((o) => o.id),
+      optionLabels: ordered.map((o) => o.label),
+      answeredAt: now,
+    },
+  };
+}
+
+/** Answers as the renderer reads them (RenderRuntime.checkedConsents / surveyAnswers). */
+export function responsesForRenderer(responses: Record<string, FlowResponse>): {
+  checkedConsents: string[];
+  surveyAnswers: Record<string, string[]>;
+} {
+  const all = Object.values(responses);
+  return {
+    checkedConsents: all.filter((r) => r.kind === 'consent').map((r) => r.elementId),
+    surveyAnswers: Object.fromEntries(
+      all.flatMap((r) => (r.kind === 'survey' ? [[r.elementId, r.optionIds]] : [])),
+    ),
+  };
 }
